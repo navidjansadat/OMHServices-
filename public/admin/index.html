@@ -6,6 +6,22 @@
     <title>ورود به پنل مدیریت</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <style>
+        .login-error {
+            color: #EF4444;
+            font-size: 14px;
+            text-align: center;
+            margin-top: 14px;
+            display: none;
+        }
+        .login-error.show {
+            display: block;
+        }
+        .btn-loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+    </style>
 </head>
 <body class="admin-login-page">
 
@@ -26,7 +42,7 @@
                     <input type="password" id="password" placeholder="رمز عبور را وارد کنید" required autofocus />
                 </div>
 
-                <button type="submit" class="btn-login">
+                <button type="submit" id="loginBtn" class="btn-login">
                     <i class="fas fa-sign-in-alt"></i> ورود
                 </button>
 
@@ -39,6 +55,96 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        // ============================================
+        // کد جاوااسکریپت مستقیم در صفحه (برای تست)
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ صفحه ورود بارگذاری شد!');
+
+            const loginForm = document.getElementById('loginForm');
+            const loginBtn = document.getElementById('loginBtn');
+            const loginError = document.getElementById('loginError');
+            const passwordInput = document.getElementById('password');
+
+            if (!loginForm) {
+                console.error('❌ فرم ورود پیدا نشد!');
+                return;
+            }
+
+            console.log('✅ فرم ورود پیدا شد');
+
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                console.log('✅ دکمه ورود کلیک شد!');
+
+                const username = document.getElementById('username').value;
+                const password = passwordInput.value.trim();
+
+                console.log('👤 نام کاربری:', username);
+                console.log('🔑 رمز عبور:', password);
+
+                if (!password) {
+                    showError('لطفاً رمز عبور را وارد کنید');
+                    return;
+                }
+
+                // غیرفعال کردن دکمه
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال ورود...';
+                loginBtn.classList.add('btn-loading');
+
+                try {
+                    const response = await fetch('/api/admin/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+
+                    const data = await response.json();
+                    console.log('📦 پاسخ سرور:', data);
+
+                    if (!response.ok) {
+                        showError(data.error || 'ورود ناموفق');
+                        loginBtn.disabled = false;
+                        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> ورود';
+                        loginBtn.classList.remove('btn-loading');
+                        return;
+                    }
+
+                    // ورود موفق
+                    console.log('✅ ورود موفق!');
+                    window.location.href = '/admin/dashboard.html';
+
+                } catch (error) {
+                    console.error('❌ خطا:', error);
+                    showError('خطا در ارتباط با سرور');
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> ورود';
+                    loginBtn.classList.remove('btn-loading');
+                }
+            });
+
+            function showError(message) {
+                loginError.textContent = message;
+                loginError.classList.add('show');
+                setTimeout(() => {
+                    loginError.classList.remove('show');
+                }, 4000);
+            }
+
+            // تست اتصال به سرور
+            async function testServer() {
+                try {
+                    const response = await fetch('/api/health');
+                    const data = await response.json();
+                    console.log('✅ سرور سالم است:', data);
+                } catch (error) {
+                    console.error('❌ سرور پاسخ نمی‌دهد:', error);
+                }
+            }
+            testServer();
+        });
+    </script>
 </body>
 </html>
