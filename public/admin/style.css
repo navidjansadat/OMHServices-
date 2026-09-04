@@ -305,9 +305,6 @@ body {
 
 /* بخش‌های مدیریت */
 .admin-section {
-    display: none;
-}
-.admin-section.active {
     display: block;
 }
 
