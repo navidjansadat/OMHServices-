@@ -1,33 +1,34 @@
 // ============================================
-// OMH Social Services - Main JavaScript
+// OMH Social Services - Main JavaScript (نسخه جدید)
 // ============================================
 
 const API_URL = window.location.origin;
-const WHATSAPP_NUMBER = '9370000000'; // شماره خود را وارد کنید
+let WHATSAPP_NUMBER = '9370000000';
 
-// ===== منتظر بارگذاری DOM =====
+// ===== داده‌های کلی =====
+let allCategories = [];
+let allSubcategories = [];
+let allServices = [];
+
+let currentCategoryId = 'all';
+let currentSubcategoryId = 'all';
+
+// ============================================
+// بارگذاری اولیه
+// ============================================
 document.addEventListener('DOMContentLoaded', () => {
-
     console.log('✅ OMH Social Services loaded!');
 
-    // ===== منوی همبرگری =====
+    // منوی همبرگری
     const hamburger = document.getElementById('hamburger');
     const navMenu = document.getElementById('navMenu');
-
     if (hamburger && navMenu) {
         hamburger.addEventListener('click', () => {
             navMenu.classList.toggle('open');
         });
     }
 
-    // ===== بارگذاری داده‌ها =====
-    loadCategories();
-    loadServices();
-    loadPosts();
-    loadReviews();
-    loadSettings();
-
-    // ===== جستجو =====
+    // جستجو
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -35,12 +36,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (query.length >= 2) {
                 searchServices(query);
             } else if (query.length === 0) {
-                loadServices();
+                loadAllData();
             }
         });
     }
 
-    // ===== دکمه شناور واتساپ =====
+    // دکمه شناور واتساپ
     const floatingBtn = document.getElementById('floatingWhatsapp');
     if (floatingBtn) {
         floatingBtn.addEventListener('click', (e) => {
@@ -49,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ===== لینک‌های تماس =====
+    // لینک‌های تماس
     const whatsappLink = document.getElementById('whatsappLink');
     if (whatsappLink) {
         whatsappLink.addEventListener('click', (e) => {
@@ -58,118 +59,204 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ===== هایلایت منو هنگام اسکرول =====
+    // بارگذاری همه داده‌ها
+    loadAllData();
+
+    // هایلایت منو
     highlightNavOnScroll();
 });
 
 // ============================================
-// ===== بارگذاری دسته‌بندی‌ها =====
+// بارگذاری همه داده‌ها
 // ============================================
-let allCategories = [];
+async function loadAllData() {
+    try {
+        await Promise.all([
+            loadCategories(),
+            loadSubcategories(),
+            loadServices()
+        ]);
+        renderCategories();
+        renderServicesByCategory('all');
+    } catch (error) {
+        console.error('Error loading data:', error);
+    }
+    loadPosts();
+    loadReviews();
+    loadSettings();
+}
 
+// ============================================
+// بارگذاری دسته‌بندی‌ها
+// ============================================
 async function loadCategories() {
     try {
-        const response = await fetch(`${API_URL}/api/categories`);
-        if (!response.ok) throw new Error('Failed to load categories');
-        allCategories = await response.json();
-
-        const filterContainer = document.getElementById('filterButtons');
-        if (!filterContainer) return;
-
-        // دکمه "همه"
-        let html = `<button class="filter-btn active" data-category="all">همه</button>`;
-
-        // دکمه‌های دسته‌بندی
-        allCategories.forEach(cat => {
-            const icon = cat.icon || '📂';
-            html += `<button class="filter-btn" data-category="${cat.id}">${icon} ${cat.name}</button>`;
-        });
-
-        filterContainer.innerHTML = html;
-
-        // رویداد کلیک روی دکمه‌های فیلتر
-        filterContainer.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                filterContainer.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const categoryId = btn.dataset.category;
-                console.log('🔍 فیلتر با:', categoryId);
-                if (categoryId === 'all') {
-                    loadServices();
-                } else {
-                    filterServicesByCategory(categoryId);
-                }
-            });
-        });
-
+        const res = await fetch(`${API_URL}/api/categories`);
+        if (!res.ok) throw new Error('Failed');
+        allCategories = await res.json();
+        console.log('📂 دسته‌بندی‌ها:', allCategories.length);
     } catch (error) {
         console.error('Error loading categories:', error);
     }
 }
 
 // ============================================
-// ===== بارگذاری سرویس‌ها =====
+// بارگذاری زیردسته‌ها
 // ============================================
-let allServices = [];
-
-async function loadServices() {
+async function loadSubcategories() {
     try {
-        const response = await fetch(`${API_URL}/api/services`);
-        if (!response.ok) throw new Error('Failed to load services');
-        allServices = await response.json();
-        console.log('📦 همه سرویس‌ها:', allServices.length);
-        renderServices(allServices);
+        const res = await fetch(`${API_URL}/api/subcategories`);
+        if (!res.ok) throw new Error('Failed');
+        allSubcategories = await res.json();
+        console.log('📁 زیردسته‌ها:', allSubcategories.length);
     } catch (error) {
-        console.error('Error loading services:', error);
-        const grid = document.getElementById('servicesGrid');
-        if (grid) {
-            grid.innerHTML = `<p style="text-align:center;color:#94A3B8;padding:40px 0;">خطا در بارگذاری سرویس‌ها</p>`;
-        }
+        console.error('Error loading subcategories:', error);
     }
 }
 
 // ============================================
-// ===== فیلتر سرویس‌ها بر اساس دسته‌بندی =====
+// بارگذاری سرویس‌ها
 // ============================================
-function filterServicesByCategory(categoryId) {
-    console.log('🔍 فیلتر کردن بر اساس:', categoryId);
-    console.log('📦 کل سرویس‌ها:', allServices.length);
+async function loadServices() {
+    try {
+        const res = await fetch(`${API_URL}/api/services`);
+        if (!res.ok) throw new Error('Failed');
+        allServices = await res.json();
+        console.log('📦 سرویس‌ها:', allServices.length);
+    } catch (error) {
+        console.error('Error loading services:', error);
+    }
+}
 
-    // فیلتر سرویس‌ها بر اساس categoryId
-    const filtered = allServices.filter(service => {
-        // بررسی اینکه سرویس دارای subcategories و categories باشد
-        const catId = service.subcategories?.categories?.id;
-        console.log(`سرویس: ${service.name} - دسته: ${catId}`);
-        return catId === categoryId;
+// ============================================
+// رندر دسته‌بندی‌ها
+// ============================================
+function renderCategories() {
+    const container = document.getElementById('categoryTabs');
+    if (!container) return;
+
+    let html = `<button class="cat-btn active" data-category="all">📋 همه</button>`;
+
+    allCategories.forEach(cat => {
+        const icon = cat.icon || '📂';
+        html += `<button class="cat-btn" data-category="${cat.id}">${icon} ${cat.name}</button>`;
     });
 
-    console.log('✅ نتیجه فیلتر:', filtered.length);
+    container.innerHTML = html;
+
+    // رویداد کلیک روی دسته‌بندی‌ها
+    container.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            container.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const categoryId = btn.dataset.category;
+            currentCategoryId = categoryId;
+            currentSubcategoryId = 'all';
+
+            renderSubcategories(categoryId);
+            renderServicesByCategory(categoryId);
+        });
+    });
+
+    // بارگذاری زیردسته‌ها برای "همه"
+    renderSubcategories('all');
+}
+
+// ============================================
+// رندر زیردسته‌ها
+// ============================================
+function renderSubcategories(categoryId) {
+    const container = document.getElementById('subcategoryTabs');
+    if (!container) return;
+
+    // فیلتر زیردسته‌ها بر اساس دسته‌بندی
+    let filtered = [];
+    if (categoryId === 'all') {
+        filtered = allSubcategories;
+    } else {
+        filtered = allSubcategories.filter(sub => sub.category_id === categoryId);
+    }
+
+    if (filtered.length === 0) {
+        container.innerHTML = `<div class="empty-message">هیچ زیردسته‌ای موجود نیست</div>`;
+        return;
+    }
+
+    let html = `<button class="sub-btn active" data-subcategory="all">📁 همه</button>`;
+
+    filtered.forEach(sub => {
+        const icon = sub.icon || '📁';
+        html += `<button class="sub-btn" data-subcategory="${sub.id}">${icon} ${sub.name}</button>`;
+    });
+
+    container.innerHTML = html;
+
+    // رویداد کلیک روی زیردسته‌ها
+    container.querySelectorAll('.sub-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            container.querySelectorAll('.sub-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const subcategoryId = btn.dataset.subcategory;
+            currentSubcategoryId = subcategoryId;
+
+            renderServicesByCategoryAndSubcategory(currentCategoryId, subcategoryId);
+        });
+    });
+}
+
+// ============================================
+// رندر سرویس‌ها بر اساس دسته‌بندی
+// ============================================
+function renderServicesByCategory(categoryId) {
+    let filtered = [];
+
+    if (categoryId === 'all') {
+        filtered = allServices;
+    } else {
+        filtered = allServices.filter(service => {
+            return service.subcategories?.categories?.id === categoryId;
+        });
+    }
+
     renderServices(filtered);
 }
 
 // ============================================
-// ===== جستجوی سرویس‌ها =====
+// رندر سرویس‌ها بر اساس دسته‌بندی + زیردسته
 // ============================================
-async function searchServices(query) {
-    try {
-        const response = await fetch(`${API_URL}/api/services?search=${encodeURIComponent(query)}`);
-        if (!response.ok) throw new Error('Failed to search services');
-        const services = await response.json();
-        renderServices(services);
-    } catch (error) {
-        console.error('Error searching services:', error);
+function renderServicesByCategoryAndSubcategory(categoryId, subcategoryId) {
+    let filtered = [];
+
+    // فیلتر بر اساس دسته‌بندی
+    if (categoryId === 'all') {
+        filtered = allServices;
+    } else {
+        filtered = allServices.filter(service => {
+            return service.subcategories?.categories?.id === categoryId;
+        });
     }
+
+    // فیلتر بر اساس زیردسته
+    if (subcategoryId !== 'all') {
+        filtered = filtered.filter(service => {
+            return service.subcategory_id === subcategoryId;
+        });
+    }
+
+    renderServices(filtered);
 }
 
 // ============================================
-// ===== رندر سرویس‌ها =====
+// رندر سرویس‌ها
 // ============================================
 function renderServices(services) {
     const grid = document.getElementById('servicesGrid');
     if (!grid) return;
 
     if (!services || services.length === 0) {
-        grid.innerHTML = `<p style="text-align:center;color:#94A3B8;padding:40px 0;">هیچ سرویسی یافت نشد</p>`;
+        grid.innerHTML = `<div class="empty-message">هیچ سرویسی یافت نشد</div>`;
         return;
     }
 
@@ -208,42 +295,54 @@ function renderServices(services) {
 }
 
 // ============================================
-// ===== سفارش سرویس =====
+// جستجوی سرویس‌ها
+// ============================================
+async function searchServices(query) {
+    try {
+        const res = await fetch(`${API_URL}/api/services?search=${encodeURIComponent(query)}`);
+        if (!res.ok) throw new Error('Failed');
+        const services = await res.json();
+        renderServices(services);
+    } catch (error) {
+        console.error('Error searching:', error);
+    }
+}
+
+// ============================================
+// سفارش سرویس
 // ============================================
 function orderService(id, name, price) {
     const message = `سلام، من می‌خواهم این سرویس را سفارش بدهم:
 سرویس: ${name}
 قیمت: ${price} AFN
 لطفاً راهنمایی کنید.`;
-
-    const encoded = encodeURIComponent(message);
-    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`;
+    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
 }
 
 // ============================================
-// ===== باز کردن واتساپ =====
+// باز کردن واتساپ
 // ============================================
 function openWhatsApp() {
-    const message = encodeURIComponent('سلام، من از سایت OMH Social Services با شما تماس می‌گیرم.');
-    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
+    const message = 'سلام، من از سایت OMH Social Services با شما تماس می‌گیرم.';
+    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
 }
 
 // ============================================
-// ===== بارگذاری نشرات =====
+// بارگذاری نشرات
 // ============================================
 async function loadPosts() {
     try {
-        const response = await fetch(`${API_URL}/api/posts`);
-        if (!response.ok) throw new Error('Failed to load posts');
-        const posts = await response.json();
+        const res = await fetch(`${API_URL}/api/posts`);
+        if (!res.ok) throw new Error('Failed');
+        const posts = await res.json();
 
         const grid = document.getElementById('postsGrid');
         if (!grid) return;
 
-        if (!posts || posts.length === 0) {
-            grid.innerHTML = `<p style="text-align:center;color:#94A3B8;padding:40px 0;">هیچ مطلبی منتشر نشده است</p>`;
+        if (!posts.length) {
+            grid.innerHTML = `<div class="empty-message">هیچ مطلبی منتشر نشده است</div>`;
             return;
         }
 
@@ -272,30 +371,23 @@ async function loadPosts() {
 
     } catch (error) {
         console.error('Error loading posts:', error);
-        const grid = document.getElementById('postsGrid');
-        if (grid) {
-            grid.innerHTML = `<p style="text-align:center;color:#94A3B8;padding:40px 0;">خطا در بارگذاری مطالب</p>`;
-        }
     }
 }
 
 // ============================================
-// ===== لایک کردن مطلب =====
+// لایک کردن مطلب
 // ============================================
 async function likePost(postId, btn) {
     try {
-        const response = await fetch(`${API_URL}/api/posts/${postId}/like`, {
+        const res = await fetch(`${API_URL}/api/posts/${postId}/like`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
-
-        if (!response.ok) throw new Error('Failed to like post');
-        const data = await response.json();
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
 
         const countSpan = btn.querySelector('.like-count');
-        if (countSpan) {
-            countSpan.textContent = data.likes || 0;
-        }
+        if (countSpan) countSpan.textContent = data.likes || 0;
         btn.classList.toggle('liked');
 
     } catch (error) {
@@ -304,46 +396,44 @@ async function likePost(postId, btn) {
 }
 
 // ============================================
-// ===== کپی متن مطلب =====
+// کپی متن مطلب
 // ============================================
 function copyPost(btn) {
     const card = btn.closest('.post-card');
-    const content = card.querySelector('.post-content');
+    const content = card?.querySelector('.post-content');
     if (!content) return;
 
     const text = content.textContent.trim();
 
     navigator.clipboard.writeText(text).then(() => {
-        const originalText = btn.innerHTML;
+        const original = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-check"></i> کپی شد!';
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-        }, 2000);
+        setTimeout(() => { btn.innerHTML = original; }, 2000);
     }).catch(() => {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        document.body.appendChild(textarea);
-        textarea.select();
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
         document.execCommand('copy');
-        document.body.removeChild(textarea);
+        document.body.removeChild(ta);
         alert('متن کپی شد!');
     });
 }
 
 // ============================================
-// ===== بارگذاری نظرات =====
+// بارگذاری نظرات
 // ============================================
 async function loadReviews() {
     try {
-        const response = await fetch(`${API_URL}/api/reviews`);
-        if (!response.ok) throw new Error('Failed to load reviews');
-        const reviews = await response.json();
+        const res = await fetch(`${API_URL}/api/reviews`);
+        if (!res.ok) throw new Error('Failed');
+        const reviews = await res.json();
 
         const grid = document.getElementById('reviewsGrid');
         if (!grid) return;
 
-        if (!reviews || reviews.length === 0) {
-            grid.innerHTML = `<p style="text-align:center;color:#94A3B8;padding:40px 0;">هنوز نظری ثبت نشده است</p>`;
+        if (!reviews.length) {
+            grid.innerHTML = `<div class="empty-message">هنوز نظری ثبت نشده است</div>`;
             return;
         }
 
@@ -376,33 +466,30 @@ async function loadReviews() {
 }
 
 // ============================================
-// ===== بارگذاری تنظیمات =====
+// بارگذاری تنظیمات
 // ============================================
 async function loadSettings() {
     try {
-        const response = await fetch(`${API_URL}/api/settings`);
-        if (!response.ok) throw new Error('Failed to load settings');
-        const settings = await response.json();
+        const res = await fetch(`${API_URL}/api/settings`);
+        if (!res.ok) throw new Error('Failed');
+        const settings = await res.json();
 
-        // به‌روزرسانی لینک‌های تماس
         if (settings.whatsapp_number) {
-            window.WHATSAPP_NUMBER = settings.whatsapp_number;
+            WHATSAPP_NUMBER = settings.whatsapp_number;
         }
 
-        if (settings.telegram_link) {
-            const el = document.getElementById('telegramLink');
-            if (el) el.href = settings.telegram_link;
-        }
+        const socialLinks = {
+            telegram: 'telegramLink',
+            facebook: 'facebookLink',
+            instagram: 'instagramLink'
+        };
 
-        if (settings.facebook_link) {
-            const el = document.getElementById('facebookLink');
-            if (el) el.href = settings.facebook_link;
-        }
-
-        if (settings.instagram_link) {
-            const el = document.getElementById('instagramLink');
-            if (el) el.href = settings.instagram_link;
-        }
+        Object.entries(socialLinks).forEach(([key, id]) => {
+            if (settings[`${key}_link`]) {
+                const el = document.getElementById(id);
+                if (el) el.href = settings[`${key}_link`];
+            }
+        });
 
         if (settings.footer_text) {
             const footer = document.querySelector('.footer-copy p');
@@ -421,7 +508,7 @@ async function loadSettings() {
 }
 
 // ============================================
-// ===== هایلایت منو هنگام اسکرول =====
+// هایلایت منو هنگام اسکرول
 // ============================================
 function highlightNavOnScroll() {
     const sections = document.querySelectorAll('section[id]');
@@ -434,9 +521,9 @@ function highlightNavOnScroll() {
         const scrollPos = window.scrollY + 120;
 
         sections.forEach(section => {
-            const sectionTop = section.offsetTop;
-            const sectionHeight = section.offsetHeight;
-            if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
+            const top = section.offsetTop;
+            const height = section.offsetHeight;
+            if (scrollPos >= top && scrollPos < top + height) {
                 current = section.getAttribute('id');
             }
         });
