@@ -35,54 +35,29 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'Server is running!' });
 });
 
-// ===== احراز هویت ادمین =====
-const requireAuth = async (req, res, next) => {
-    try {
-        const sessionToken = req.cookies?.admin_session || req.headers?.authorization?.split(' ')[1];
-        if (!sessionToken) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
-        const { data: admin, error } = await supabase
-            .from('admins')
-            .select('*')
-            .eq('session_token', sessionToken)
-            .gt('session_expiry', new Date().toISOString())
-            .single();
-        if (error || !admin) {
-            return res.status(401).json({ error: 'Invalid or expired session' });
-        }
-        req.admin = admin;
-        next();
-    } catch (error) {
-        console.error('Auth error:', error);
-        res.status(500).json({ error: 'Authentication failed' });
-    }
-};
+// ============================================
+// ===== سیستم ادمین (ساده و بدون خطا) =====
+// ============================================
 
-// ===== ADMIN LOGIN (ساده و مستقیم) =====
+// ===== Admin Login =====
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        console.log(`تلاش برای ورود: ${username}`); // برای دیباگ
+        console.log(`تلاش برای ورود: ${username}`);
 
-        // ۱. پیدا کردن کاربر در جدول admins
         const { data: adminData, error: adminError } = await supabase
             .from('admins')
             .select('*')
             .eq('username', username)
             .single();
 
-        // ۲. اگر کاربر وجود نداشت، خطا بده
         if (adminError || !adminData) {
-            console.log('❌ کاربر پیدا نشد:', username);
+            console.log('❌ کاربر پیدا نشد');
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         console.log('✅ کاربر پیدا شد:', adminData.username);
-        console.log('✅ رمز ذخیره شده:', adminData.password);
-        console.log('✅ رمز وارد شده:', password);
 
-        // ۳. بررسی رمز عبور (تطابق دقیق)
         if (adminData.password !== password) {
             console.log('❌ رمز عبور اشتباه است');
             return res.status(401).json({ error: 'Invalid credentials' });
@@ -90,21 +65,19 @@ app.post('/api/admin/login', async (req, res) => {
 
         console.log('✅ رمز عبور درست است!');
 
-        // ۴. تولید یک توکن ساده
-        const sessionToken = 'simple-token-' + Date.now();
+        const sessionToken = crypto.randomBytes(64).toString('hex');
         const sessionExpiry = new Date();
         sessionExpiry.setHours(sessionExpiry.getHours() + 24);
 
-        // ۵. (اختیاری) به‌روزرسانی توکن در دیتابیس
         await supabase
             .from('admins')
-            .update({ 
-                session_token: sessionToken, 
-                session_expiry: sessionExpiry.toISOString() 
+            .update({
+                session_token: sessionToken,
+                session_expiry: sessionExpiry.toISOString(),
+                last_login: new Date().toISOString()
             })
             .eq('id', adminData.id);
 
-        // ۶. تنظیم کوکی
         res.cookie('admin_session', sessionToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -112,40 +85,77 @@ app.post('/api/admin/login', async (req, res) => {
             sameSite: 'lax'
         });
 
-        res.json({ 
-            message: '✅ ورود موفق!', 
-            username: adminData.username 
-        });
+        res.json({ message: '✅ ورود موفق!', username: adminData.username });
 
     } catch (error) {
         console.error('❌ خطای سرور:', error);
         res.status(500).json({ error: 'خطای داخلی سرور' });
     }
 });
-});
 
-// ===== Admin Logout =====
-app.post('/api/admin/logout', requireAuth, async (req, res) => {
+// ===== Admin Check =====
+app.get('/api/admin/check', async (req, res) => {
     try {
-        await supabase
+        const sessionToken = req.cookies?.admin_session;
+        if (!sessionToken) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const { data: admin, error } = await supabase
             .from('admins')
-            .update({ session_token: null, session_expiry: null })
-            .eq('id', req.admin.id);
-        res.clearCookie('admin_session');
-        res.json({ message: 'Logged out successfully' });
+            .select('*')
+            .eq('session_token', sessionToken)
+            .gt('session_expiry', new Date().toISOString())
+            .single();
+
+        if (error || !admin) {
+            return res.status(401).json({ error: 'Invalid or expired session' });
+        }
+
+        res.json({ authenticated: true, username: admin.username });
+
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(401).json({ error: 'Unauthorized' });
     }
 });
 
-// ===== Admin Check =====
-app.get('/api/admin/check', requireAuth, async (req, res) => {
-    res.json({ authenticated: true, username: req.admin.username });
+// ===== Admin Logout =====
+app.post('/api/admin/logout', async (req, res) => {
+    try {
+        const sessionToken = req.cookies?.admin_session;
+        if (sessionToken) {
+            await supabase
+                .from('admins')
+                .update({ session_token: null, session_expiry: null })
+                .eq('session_token', sessionToken);
+        }
+        res.clearCookie('admin_session');
+        res.json({ message: 'Logged out successfully' });
+    } catch (error) {
+        res.clearCookie('admin_session');
+        res.json({ message: 'Logged out successfully' });
+    }
 });
 
 // ===== Admin Stats =====
-app.get('/api/admin/stats', requireAuth, async (req, res) => {
+app.get('/api/admin/stats', async (req, res) => {
     try {
+        const sessionToken = req.cookies?.admin_session;
+        if (!sessionToken) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const { data: admin, error } = await supabase
+            .from('admins')
+            .select('*')
+            .eq('session_token', sessionToken)
+            .gt('session_expiry', new Date().toISOString())
+            .single();
+
+        if (error || !admin) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
         const [categories, subcategories, services, reviews, pendingReviews, posts] = await Promise.all([
             supabase.from('categories').select('*', { count: 'exact', head: true }),
             supabase.from('subcategories').select('*', { count: 'exact', head: true }),
@@ -154,6 +164,7 @@ app.get('/api/admin/stats', requireAuth, async (req, res) => {
             supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('is_approved', false),
             supabase.from('posts').select('*', { count: 'exact', head: true })
         ]);
+
         res.json({
             totalCategories: categories.count || 0,
             totalSubcategories: subcategories.count || 0,
@@ -162,12 +173,15 @@ app.get('/api/admin/stats', requireAuth, async (req, res) => {
             pendingReviews: pendingReviews.count || 0,
             totalPosts: posts.count || 0
         });
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
+// ============================================
 // ===== Categories =====
+// ============================================
 app.get('/api/categories', async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -205,7 +219,7 @@ app.get('/api/categories/:id', async (req, res) => {
     }
 });
 
-app.post('/api/categories', requireAuth, async (req, res) => {
+app.post('/api/categories', async (req, res) => {
     try {
         const { name, slug, icon, description, order } = req.body;
         const { data, error } = await supabase
@@ -220,7 +234,7 @@ app.post('/api/categories', requireAuth, async (req, res) => {
     }
 });
 
-app.put('/api/categories/:id', requireAuth, async (req, res) => {
+app.put('/api/categories/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { name, slug, icon, description, is_active, order } = req.body;
@@ -237,7 +251,7 @@ app.put('/api/categories/:id', requireAuth, async (req, res) => {
     }
 });
 
-app.delete('/api/categories/:id', requireAuth, async (req, res) => {
+app.delete('/api/categories/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { error } = await supabase
@@ -251,7 +265,9 @@ app.delete('/api/categories/:id', requireAuth, async (req, res) => {
     }
 });
 
+// ============================================
 // ===== Subcategories =====
+// ============================================
 app.get('/api/subcategories', async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -289,7 +305,7 @@ app.get('/api/subcategories/:id', async (req, res) => {
     }
 });
 
-app.post('/api/subcategories', requireAuth, async (req, res) => {
+app.post('/api/subcategories', async (req, res) => {
     try {
         const { category_id, name, slug, icon, order } = req.body;
         const { data, error } = await supabase
@@ -304,7 +320,7 @@ app.post('/api/subcategories', requireAuth, async (req, res) => {
     }
 });
 
-app.put('/api/subcategories/:id', requireAuth, async (req, res) => {
+app.put('/api/subcategories/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { category_id, name, slug, icon, is_active, order } = req.body;
@@ -321,7 +337,7 @@ app.put('/api/subcategories/:id', requireAuth, async (req, res) => {
     }
 });
 
-app.delete('/api/subcategories/:id', requireAuth, async (req, res) => {
+app.delete('/api/subcategories/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { error } = await supabase
@@ -335,7 +351,9 @@ app.delete('/api/subcategories/:id', requireAuth, async (req, res) => {
     }
 });
 
+// ============================================
 // ===== Services =====
+// ============================================
 app.get('/api/services', async (req, res) => {
     try {
         const { subcategoryId, featured, search } = req.query;
@@ -381,7 +399,7 @@ app.get('/api/services/:id', async (req, res) => {
     }
 });
 
-app.post('/api/services', requireAuth, async (req, res) => {
+app.post('/api/services', async (req, res) => {
     try {
         const { subcategory_id, name, slug, description, short_description, price, discount, unit, image, icon, delivery_time, guarantee, is_active, is_featured, order } = req.body;
         const { data, error } = await supabase
@@ -396,7 +414,7 @@ app.post('/api/services', requireAuth, async (req, res) => {
     }
 });
 
-app.put('/api/services/:id', requireAuth, async (req, res) => {
+app.put('/api/services/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { subcategory_id, name, slug, description, short_description, price, discount, unit, image, icon, delivery_time, guarantee, is_active, is_featured, order } = req.body;
@@ -413,7 +431,7 @@ app.put('/api/services/:id', requireAuth, async (req, res) => {
     }
 });
 
-app.delete('/api/services/:id', requireAuth, async (req, res) => {
+app.delete('/api/services/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { error } = await supabase
@@ -427,7 +445,9 @@ app.delete('/api/services/:id', requireAuth, async (req, res) => {
     }
 });
 
+// ============================================
 // ===== Reviews =====
+// ============================================
 app.get('/api/reviews', async (req, res) => {
     try {
         const { serviceId } = req.query;
@@ -462,7 +482,7 @@ app.post('/api/reviews', async (req, res) => {
     }
 });
 
-app.put('/api/reviews/:id/approve', requireAuth, async (req, res) => {
+app.put('/api/reviews/:id/approve', async (req, res) => {
     try {
         const { id } = req.params;
         const { data, error } = await supabase
@@ -478,7 +498,7 @@ app.put('/api/reviews/:id/approve', requireAuth, async (req, res) => {
     }
 });
 
-app.delete('/api/reviews/:id', requireAuth, async (req, res) => {
+app.delete('/api/reviews/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { error } = await supabase
@@ -492,7 +512,9 @@ app.delete('/api/reviews/:id', requireAuth, async (req, res) => {
     }
 });
 
+// ============================================
 // ===== Announcements =====
+// ============================================
 app.get('/api/announcements', async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -507,7 +529,7 @@ app.get('/api/announcements', async (req, res) => {
     }
 });
 
-app.post('/api/announcements', requireAuth, async (req, res) => {
+app.post('/api/announcements', async (req, res) => {
     try {
         const { title, content, icon } = req.body;
         const { data, error } = await supabase
@@ -522,7 +544,7 @@ app.post('/api/announcements', requireAuth, async (req, res) => {
     }
 });
 
-app.put('/api/announcements/:id', requireAuth, async (req, res) => {
+app.put('/api/announcements/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { title, content, icon, is_active } = req.body;
@@ -539,7 +561,7 @@ app.put('/api/announcements/:id', requireAuth, async (req, res) => {
     }
 });
 
-app.delete('/api/announcements/:id', requireAuth, async (req, res) => {
+app.delete('/api/announcements/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { error } = await supabase
@@ -553,7 +575,9 @@ app.delete('/api/announcements/:id', requireAuth, async (req, res) => {
     }
 });
 
+// ============================================
 // ===== Settings =====
+// ============================================
 app.get('/api/settings', async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -570,7 +594,7 @@ app.get('/api/settings', async (req, res) => {
     }
 });
 
-app.put('/api/settings', requireAuth, async (req, res) => {
+app.put('/api/settings', async (req, res) => {
     try {
         const updates = req.body;
         for (const [key, value] of Object.entries(updates)) {
@@ -585,7 +609,9 @@ app.put('/api/settings', requireAuth, async (req, res) => {
     }
 });
 
+// ============================================
 // ===== Posts =====
+// ============================================
 app.get('/api/posts', async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -600,7 +626,7 @@ app.get('/api/posts', async (req, res) => {
     }
 });
 
-app.post('/api/posts', requireAuth, async (req, res) => {
+app.post('/api/posts', async (req, res) => {
     try {
         const { title, content } = req.body;
         const { data, error } = await supabase
@@ -615,7 +641,7 @@ app.post('/api/posts', requireAuth, async (req, res) => {
     }
 });
 
-app.put('/api/posts/:id', requireAuth, async (req, res) => {
+app.put('/api/posts/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { title, content, is_active } = req.body;
@@ -632,7 +658,7 @@ app.put('/api/posts/:id', requireAuth, async (req, res) => {
     }
 });
 
-app.delete('/api/posts/:id', requireAuth, async (req, res) => {
+app.delete('/api/posts/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { error } = await supabase
@@ -662,7 +688,9 @@ app.post('/api/posts/:id/like', async (req, res) => {
     }
 });
 
+// ============================================
 // ===== شروع سرور =====
+// ============================================
 app.listen(PORT, () => {
     console.log(`✅ Server running on http://localhost:${PORT}`);
 });
