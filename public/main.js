@@ -2,12 +2,13 @@
 // OMH Social Services - Main JavaScript
 // ============================================
 
-// ===== تنظیمات =====
 const API_URL = window.location.origin;
-const WHATSAPP_NUMBER = '937XXXXXXXX'; // شماره خود را وارد کنید
+const WHATSAPP_NUMBER = '9370000000'; // شماره خود را وارد کنید
 
 // ===== منتظر بارگذاری DOM =====
 document.addEventListener('DOMContentLoaded', () => {
+
+    console.log('✅ OMH Social Services loaded!');
 
     // ===== منوی همبرگری =====
     const hamburger = document.getElementById('hamburger');
@@ -64,11 +65,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================
 // ===== بارگذاری دسته‌بندی‌ها =====
 // ============================================
+let allCategories = [];
+
 async function loadCategories() {
     try {
         const response = await fetch(`${API_URL}/api/categories`);
         if (!response.ok) throw new Error('Failed to load categories');
-        const categories = await response.json();
+        allCategories = await response.json();
 
         const filterContainer = document.getElementById('filterButtons');
         if (!filterContainer) return;
@@ -77,7 +80,7 @@ async function loadCategories() {
         let html = `<button class="filter-btn active" data-category="all">همه</button>`;
 
         // دکمه‌های دسته‌بندی
-        categories.forEach(cat => {
+        allCategories.forEach(cat => {
             const icon = cat.icon || '📂';
             html += `<button class="filter-btn" data-category="${cat.id}">${icon} ${cat.name}</button>`;
         });
@@ -90,6 +93,7 @@ async function loadCategories() {
                 filterContainer.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 const categoryId = btn.dataset.category;
+                console.log('🔍 فیلتر با:', categoryId);
                 if (categoryId === 'all') {
                     loadServices();
                 } else {
@@ -106,12 +110,15 @@ async function loadCategories() {
 // ============================================
 // ===== بارگذاری سرویس‌ها =====
 // ============================================
+let allServices = [];
+
 async function loadServices() {
     try {
         const response = await fetch(`${API_URL}/api/services`);
         if (!response.ok) throw new Error('Failed to load services');
-        const services = await response.json();
-        renderServices(services);
+        allServices = await response.json();
+        console.log('📦 همه سرویس‌ها:', allServices.length);
+        renderServices(allServices);
     } catch (error) {
         console.error('Error loading services:', error);
         const grid = document.getElementById('servicesGrid');
@@ -124,22 +131,20 @@ async function loadServices() {
 // ============================================
 // ===== فیلتر سرویس‌ها بر اساس دسته‌بندی =====
 // ============================================
-async function filterServicesByCategory(categoryId) {
-    try {
-        // دریافت همه سرویس‌ها و فیلتر در سمت کلاینت
-        const response = await fetch(`${API_URL}/api/services`);
-        if (!response.ok) throw new Error('Failed to load services');
-        const services = await response.json();
+function filterServicesByCategory(categoryId) {
+    console.log('🔍 فیلتر کردن بر اساس:', categoryId);
+    console.log('📦 کل سرویس‌ها:', allServices.length);
 
-        // فیلتر بر اساس categoryId
-        const filtered = services.filter(s => {
-            return s.subcategories?.categories?.id === categoryId;
-        });
+    // فیلتر سرویس‌ها بر اساس categoryId
+    const filtered = allServices.filter(service => {
+        // بررسی اینکه سرویس دارای subcategories و categories باشد
+        const catId = service.subcategories?.categories?.id;
+        console.log(`سرویس: ${service.name} - دسته: ${catId}`);
+        return catId === categoryId;
+    });
 
-        renderServices(filtered);
-    } catch (error) {
-        console.error('Error filtering services:', error);
-    }
+    console.log('✅ نتیجه فیلتر:', filtered.length);
+    renderServices(filtered);
 }
 
 // ============================================
@@ -171,7 +176,6 @@ function renderServices(services) {
     let html = '';
     services.forEach(service => {
         const icon = service.icon || '📱';
-        const image = service.image || '';
         const discount = service.discount || 0;
         const price = service.price || 0;
         const finalPrice = discount > 0 ? price - (price * discount / 100) : price;
@@ -288,7 +292,6 @@ async function likePost(postId, btn) {
         if (!response.ok) throw new Error('Failed to like post');
         const data = await response.json();
 
-        // بروزرسانی تعداد لایک
         const countSpan = btn.querySelector('.like-count');
         if (countSpan) {
             countSpan.textContent = data.likes || 0;
@@ -311,14 +314,12 @@ function copyPost(btn) {
     const text = content.textContent.trim();
 
     navigator.clipboard.writeText(text).then(() => {
-        // نمایش پیام موقت
         const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-check"></i> کپی شد!';
         setTimeout(() => {
             btn.innerHTML = originalText;
         }, 2000);
     }).catch(() => {
-        // روش جایگزین برای مرورگرهای قدیمی
         const textarea = document.createElement('textarea');
         textarea.value = text;
         document.body.appendChild(textarea);
@@ -403,23 +404,15 @@ async function loadSettings() {
             if (el) el.href = settings.instagram_link;
         }
 
-        // فوتر
         if (settings.footer_text) {
             const footer = document.querySelector('.footer-copy p');
             if (footer) footer.textContent = settings.footer_text;
         }
 
-        // عنوان سایت
         if (settings.site_name) {
             document.title = settings.site_name;
             const logoText = document.querySelector('.logo span');
             if (logoText) logoText.textContent = settings.site_name;
-        }
-
-        // توضیحات سایت
-        if (settings.site_description) {
-            const metaDesc = document.querySelector('meta[name="description"]');
-            if (metaDesc) metaDesc.content = settings.site_description;
         }
 
     } catch (error) {
@@ -455,17 +448,6 @@ function highlightNavOnScroll() {
             }
         });
     });
-}
-
-// ============================================
-// ===== تابع increment برای Supabase =====
-// ============================================
-// این تابع در سمت سرور استفاده می‌شود، اما
-// برای جلوگیری از خطا در کلاینت تعریف می‌کنیم
-if (!window.supabase) {
-    window.supabase = {
-        rpc: () => {}
-    };
 }
 
 console.log('✅ OMH Social Services loaded successfully!');
