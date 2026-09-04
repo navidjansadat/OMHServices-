@@ -920,4 +920,82 @@ footer {
         padding: 4px 14px;
         font-size: 12px;
     }
+}/* ============================================
+   استایل Category و Subcategory
+   ============================================ */
+
+.category-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.category-tabs .cat-btn {
+    padding: 10px 24px;
+    border-radius: 30px;
+    border: 2px solid var(--gray-200);
+    background: var(--white);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.category-tabs .cat-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.category-tabs .cat-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.subcategory-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 24px;
+    padding: 10px;
+    background: var(--gray-50);
+    border-radius: 12px;
+    min-height: 50px;
+}
+
+.subcategory-tabs .sub-btn {
+    padding: 6px 18px;
+    border-radius: 20px;
+    border: 2px solid var(--gray-200);
+    background: var(--white);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.subcategory-tabs .sub-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.subcategory-tabs .sub-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.empty-message {
+    text-align: center;
+    color: var(--gray-400);
+    padding: 40px 0;
+    width: 100%;
+    font-size: 16px;
 }
