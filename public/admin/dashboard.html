@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>پنل مدیریت | OMH</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body class="admin-dashboard">
+
+    <!-- ===== هدر ===== -->
+    <header class="admin-header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-bolt"></i>
+                <span>OMH</span>
+            </div>
+            <div class="admin-user">
+                <span>ادمین</span>
+                <button class="logout-btn"><i class="fas fa-sign-out-alt"></i> خروج</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== محتوا ===== -->
+    <main class="admin-content">
+
+        <div class="container">
+            <h1 class="admin-title">📊 داشبورد مدیریت</h1>
+            <p class="admin-subtitle">به پنل مدیریت OMH Social Services خوش آمدید</p>
+
+            <!-- ===== کارت‌های آمار ===== -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📂</div>
+                    <div class="stat-number" id="statCategories">0</div>
+                    <div class="stat-label">دسته‌بندی‌ها</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📁</div>
+                    <div class="stat-number" id="statSubcategories">0</div>
+                    <div class="stat-label">زیردسته‌ها</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🛍️</div>
+                    <div class="stat-number" id="statServices">0</div>
+                    <div class="stat-label">سرویس‌ها</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-number" id="statReviews">0</div>
+                    <div class="stat-label">نظرات تأییدشده</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-number" id="statPendingReviews">0</div>
+                    <div class="stat-label">نظرات در انتظار</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📜</div>
+                    <div class="stat-number" id="statPosts">0</div>
+                    <div class="stat-label">مطالب نشرات</div>
+                </div>
+            </div>
+
+            <!-- ===== منوی مدیریت ===== -->
+            <nav class="admin-nav">
+                <button class="active" data-section="sectionCategories">📂 دسته‌بندی‌ها</button>
+                <button data-section="sectionSubcategories">📁 زیردسته‌ها</button>
+                <button data-section="sectionServices">🛍️ سرویس‌ها</button>
+                <button data-section="sectionReviews">⭐ نظرات</button>
+                <button data-section="sectionPosts">📜 نشرات</button>
+                <button data-section="sectionSettings">⚙️ تنظیمات</button>
+            </nav>
+
+            <!-- ===== بخش دسته‌بندی‌ها ===== -->
+            <div id="sectionCategories" class="admin-section active">
+                <div class="section-header">
+                    <h3>📂 مدیریت دسته‌بندی‌ها</h3>
+                    <button class="btn-add" onclick="showCategoryModal()">+ افزودن جدید</button>
+                </div>
+                <div class="admin-table">
+                    <table id="categoriesTable">
+                        <thead>
+                            <tr>
+                                <th>آیکون</th>
+                                <th>نام</th>
+                                <th>وضعیت</th>
+                                <th>ترتیب</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="5" style="text-align:center;color:#94A3B8;">در حال بارگذاری...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== بخش زیردسته‌ها ===== -->
+            <div id="sectionSubcategories" class="admin-section">
+                <div class="section-header">
+                    <h3>📁 مدیریت زیردسته‌ها</h3>
+                    <button class="btn-add" onclick="showSubcategoryModal()">+ افزودن جدید</button>
+                </div>
+                <div class="admin-table">
+                    <table id="subcategoriesTable">
+                        <thead>
+                            <tr>
+                                <th>آیکون</th>
+                                <th>نام</th>
+                                <th>دسته‌بندی</th>
+                                <th>وضعیت</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="5" style="text-align:center;color:#94A3B8;">در حال بارگذاری...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== بخش سرویس‌ها ===== -->
+            <div id="sectionServices" class="admin-section">
+                <div class="section-header">
+                    <h3>🛍️ مدیریت سرویس‌ها</h3>
+                    <button class="btn-add" onclick="showServiceModal()">+ افزودن جدید</button>
+                </div>
+                <div class="admin-table">
+                    <table id="servicesTable">
+                        <thead>
+                            <tr>
+                                <th>آیکون</th>
+                                <th>نام</th>
+                                <th>قیمت</th>
+                                <th>تخفیف</th>
+                                <th>وضعیت</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="6" style="text-align:center;color:#94A3B8;">در حال بارگذاری...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== بخش نظرات ===== -->
+            <div id="sectionReviews" class="admin-section">
+                <div class="section-header">
+                    <h3>⭐ مدیریت نظرات</h3>
+                </div>
+                <div class="admin-table">
+                    <table id="reviewsTable">
+                        <thead>
+                            <tr>
+                                <th>نام</th>
+                                <th>امتیاز</th>
+                                <th>متن</th>
+                                <th>وضعیت</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="5" style="text-align:center;color:#94A3B8;">در حال بارگذاری...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== بخش نشرات ===== -->
+            <div id="sectionPosts" class="admin-section">
+                <div class="section-header">
+                    <h3>📜 مدیریت نشرات</h3>
+                    <button class="btn-add" onclick="showPostModal()">+ افزودن مطلب جدید</button>
+                </div>
+                <div class="admin-table">
+                    <table id="postsTable">
+                        <thead>
+                            <tr>
+                                <th>عنوان</th>
+                                <th>متن</th>
+                                <th>لایک</th>
+                                <th>وضعیت</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="5" style="text-align:center;color:#94A3B8;">در حال بارگذاری...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== بخش تنظیمات ===== -->
+            <div id="sectionSettings" class="admin-section">
+                <div class="section-header">
+                    <h3>⚙️ تنظیمات سایت</h3>
+                    <button class="btn-save-settings" onclick="saveSettings()">💾 ذخیره تنظیمات</button>
+                </div>
+                <form id="settingsForm" class="settings-grid">
+                    <div class="form-group full-width">
+                        <label>نام سایت</label>
+                        <input type="text" id="settingSiteName" placeholder="نام سایت را وارد کنید" />
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fab fa-whatsapp"></i> شماره واتساپ</label>
+                        <input type="text" id="settingWhatsapp" placeholder="مثال: 937XXXXXXX" />
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fab fa-telegram"></i> لینک تلگرام</label>
+                        <input type="text" id="settingTelegram" placeholder="https://t.me/..." />
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fab fa-facebook"></i> لینک فیسبوک</label>
+                        <input type="text" id="settingFacebook" placeholder="https://facebook.com/..." />
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fab fa-instagram"></i> لینک اینستاگرام</label>
+                        <input type="text" id="settingInstagram" placeholder="https://instagram.com/..." />
+                    </div>
+                    <div class="form-group full-width">
+                        <label>متن فوتر</label>
+                        <input type="text" id="settingFooter" placeholder="متن فوتر سایت" />
+                    </div>
+                    <div class="form-group full-width">
+                        <label>اعلان سراسری</label>
+                        <textarea id="settingAnnouncement" rows="3" placeholder="متن اعلان را وارد کنید..."></textarea>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ===== مودال دسته‌بندی ===== -->
+    <div id="categoryModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="categoryModalTitle">افزودن دسته‌بندی جدید</h3>
+                <button class="close-btn" onclick="closeModal('categoryModal')">&times;</button>
+            </div>
+            <form>
+                <input type="hidden" id="categoryId" />
+                <div class="form-group">
+                    <label>نام دسته‌بندی</label>
+                    <input type="text" id="categoryName" placeholder="مثال: شبکه‌های اجتماعی" required />
+                </div>
+                <div class="form-group">
+                    <label>آیکون (اختیاری)</label>
+                    <input type="text" id="categoryIcon" placeholder="مثال: 📱" />
+                </div>
+                <div class="form-group">
+                    <label>ترتیب نمایش</label>
+                    <input type="number" id="categoryOrder" value="0" />
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="categoryActive" checked />
+                        فعال
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-save" onclick="saveCategory()">ذخیره</button>
+                    <button type="button" class="btn-cancel" onclick="closeModal('categoryModal')">لغو</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== مودال زیردسته ===== -->
+    <div id="subcategoryModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="subcategoryModalTitle">افزودن زیردسته جدید</h3>
+                <button class="close-btn" onclick="closeModal('subcategoryModal')">&times;</button>
+            </div>
+            <form>
+                <input type="hidden" id="subcategoryId" />
+                <div class="form-group">
+                    <label>دسته‌بندی</label>
+                    <select id="subcategoryCategoryId" required>
+                        <option value="">انتخاب کنید...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>نام زیردسته</label>
+                    <input type="text" id="subcategoryName" placeholder="مثال: فالوور" required />
+                </div>
+                <div class="form-group">
+                    <label>آیکون (اختیاری)</label>
+                    <input type="text" id="subcategoryIcon" placeholder="مثال: 📈" />
+                </div>
+                <div class="form-group">
+                    <label>ترتیب نمایش</label>
+                    <input type="number" id="subcategoryOrder" value="0" />
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="subcategoryActive" checked />
+                        فعال
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-save" onclick="saveSubcategory()">ذخیره</button>
+                    <button type="button" class="btn-cancel" onclick="closeModal('subcategoryModal')">لغو</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== مودال سرویس ===== -->
+    <div id="serviceModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="serviceModalTitle">افزودن سرویس جدید</h3>
+                <button class="close-btn" onclick="closeModal('serviceModal')">&times;</button>
+            </div>
+            <form>
+                <input type="hidden" id="serviceId" />
+                <div class="form-group">
+                    <label>زیردسته</label>
+                    <select id="serviceSubcategoryId" required>
+                        <option value="">انتخاب کنید...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>نام سرویس</label>
+                    <input type="text" id="serviceName" placeholder="مثال: ۱,۰۰۰ فالوور" required />
+                </div>
+                <div class="form-group">
+                    <label>قیمت (AFN)</label>
+                    <input type="number" id="servicePrice" placeholder="مثال: ۱۵۰" required />
+                </div>
+                <div class="form-group">
+                    <label>تخفیف (درصد)</label>
+                    <input type="number" id="serviceDiscount" value="0" placeholder="مثال: ۲۰" />
+                </div>
+                <div class="form-group">
+                    <label>توضیحات</label>
+                    <textarea id="serviceDescription" rows="3" placeholder="توضیحات کامل سرویس..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="serviceActive" checked />
+                        فعال
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-save" onclick="saveService()">ذخیره</button>
+                    <button type="button" class="btn-cancel" onclick="closeModal('serviceModal')">لغو</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== مودال مطلب ===== -->
+    <div id="postModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="postModalTitle">افزودن مطلب جدید</h3>
+                <button class="close-btn" onclick="closeModal('postModal')">&times;</button>
+            </div>
+            <form>
+                <input type="hidden" id="postId" />
+                <div class="form-group">
+                    <label>عنوان</label>
+                    <input type="text" id="postTitle" placeholder="عنوان مطلب" required />
+                </div>
+                <div class="form-group">
+                    <label>متن</label>
+                    <textarea id="postContent" rows="6" placeholder="متن کامل مطلب را بنویسید..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="postActive" checked />
+                        فعال
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-save" onclick="savePost()">ذخیره</button>
+                    <button type="button" class="btn-cancel" onclick="closeModal('postModal')">لغو</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
