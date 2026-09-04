@@ -17,8 +17,8 @@
                 <span>OMH</span>
             </div>
             <div class="admin-user">
-                <span>ادمین</span>
-                <button class="logout-btn"><i class="fas fa-sign-out-alt"></i> خروج</button>
+                <span id="adminName">ادمین</span>
+                <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> خروج</button>
             </div>
         </div>
     </header>
@@ -66,22 +66,22 @@
 
             <!-- ===== منوی مدیریت ===== -->
             <nav class="admin-nav">
-                <button class="active" data-section="sectionCategories">📂 دسته‌بندی‌ها</button>
-                <button data-section="sectionSubcategories">📁 زیردسته‌ها</button>
-                <button data-section="sectionServices">🛍️ سرویس‌ها</button>
-                <button data-section="sectionReviews">⭐ نظرات</button>
-                <button data-section="sectionPosts">📜 نشرات</button>
-                <button data-section="sectionSettings">⚙️ تنظیمات</button>
+                <button class="active" data-section="sectionCategories" onclick="showSection('sectionCategories')">📂 دسته‌بندی‌ها</button>
+                <button data-section="sectionSubcategories" onclick="showSection('sectionSubcategories')">📁 زیردسته‌ها</button>
+                <button data-section="sectionServices" onclick="showSection('sectionServices')">🛍️ سرویس‌ها</button>
+                <button data-section="sectionReviews" onclick="showSection('sectionReviews')">⭐ نظرات</button>
+                <button data-section="sectionPosts" onclick="showSection('sectionPosts')">📜 نشرات</button>
+                <button data-section="sectionSettings" onclick="showSection('sectionSettings')">⚙️ تنظیمات</button>
             </nav>
 
             <!-- ===== بخش دسته‌بندی‌ها ===== -->
             <div id="sectionCategories" class="admin-section active">
                 <div class="section-header">
                     <h3>📂 مدیریت دسته‌بندی‌ها</h3>
-                    <button class="btn-add" onclick="showCategoryModal()">+ افزودن جدید</button>
+                    <button class="btn-add" onclick="openModal('categoryModal')">+ افزودن جدید</button>
                 </div>
                 <div class="admin-table">
-                    <table id="categoriesTable">
+                    <table>
                         <thead>
                             <tr>
                                 <th>آیکون</th>
@@ -91,7 +91,7 @@
                                 <th>عملیات</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="categoriesTableBody">
                             <tr><td colspan="5" style="text-align:center;color:#94A3B8;">در حال بارگذاری...</td></tr>
                         </tbody>
                     </table>
@@ -102,10 +102,10 @@
             <div id="sectionSubcategories" class="admin-section">
                 <div class="section-header">
                     <h3>📁 مدیریت زیردسته‌ها</h3>
-                    <button class="btn-add" onclick="showSubcategoryModal()">+ افزودن جدید</button>
+                    <button class="btn-add" onclick="openModal('subcategoryModal')">+ افزودن جدید</button>
                 </div>
                 <div class="admin-table">
-                    <table id="subcategoriesTable">
+                    <table>
                         <thead>
                             <tr>
                                 <th>آیکون</th>
@@ -115,7 +115,7 @@
                                 <th>عملیات</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="subcategoriesTableBody">
                             <tr><td colspan="5" style="text-align:center;color:#94A3B8;">در حال بارگذاری...</td></tr>
                         </tbody>
                     </table>
@@ -126,10 +126,10 @@
             <div id="sectionServices" class="admin-section">
                 <div class="section-header">
                     <h3>🛍️ مدیریت سرویس‌ها</h3>
-                    <button class="btn-add" onclick="showServiceModal()">+ افزودن جدید</button>
+                    <button class="btn-add" onclick="openModal('serviceModal')">+ افزودن جدید</button>
                 </div>
                 <div class="admin-table">
-                    <table id="servicesTable">
+                    <table>
                         <thead>
                             <tr>
                                 <th>آیکون</th>
@@ -140,7 +140,7 @@
                                 <th>عملیات</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="servicesTableBody">
                             <tr><td colspan="6" style="text-align:center;color:#94A3B8;">در حال بارگذاری...</td></tr>
                         </tbody>
                     </table>
@@ -153,7 +153,7 @@
                     <h3>⭐ مدیریت نظرات</h3>
                 </div>
                 <div class="admin-table">
-                    <table id="reviewsTable">
+                    <table>
                         <thead>
                             <tr>
                                 <th>نام</th>
@@ -163,7 +163,7 @@
                                 <th>عملیات</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="reviewsTableBody">
                             <tr><td colspan="5" style="text-align:center;color:#94A3B8;">در حال بارگذاری...</td></tr>
                         </tbody>
                     </table>
@@ -174,10 +174,10 @@
             <div id="sectionPosts" class="admin-section">
                 <div class="section-header">
                     <h3>📜 مدیریت نشرات</h3>
-                    <button class="btn-add" onclick="showPostModal()">+ افزودن مطلب جدید</button>
+                    <button class="btn-add" onclick="openModal('postModal')">+ افزودن مطلب جدید</button>
                 </div>
                 <div class="admin-table">
-                    <table id="postsTable">
+                    <table>
                         <thead>
                             <tr>
                                 <th>عنوان</th>
@@ -187,7 +187,7 @@
                                 <th>عملیات</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="postsTableBody">
                             <tr><td colspan="5" style="text-align:center;color:#94A3B8;">در حال بارگذاری...</td></tr>
                         </tbody>
                     </table>
@@ -200,7 +200,7 @@
                     <h3>⚙️ تنظیمات سایت</h3>
                     <button class="btn-save-settings" onclick="saveSettings()">💾 ذخیره تنظیمات</button>
                 </div>
-                <form id="settingsForm" class="settings-grid">
+                <div class="settings-grid">
                     <div class="form-group full-width">
                         <label>نام سایت</label>
                         <input type="text" id="settingSiteName" placeholder="نام سایت را وارد کنید" />
@@ -229,7 +229,7 @@
                         <label>اعلان سراسری</label>
                         <textarea id="settingAnnouncement" rows="3" placeholder="متن اعلان را وارد کنید..."></textarea>
                     </div>
-                </form>
+                </div>
             </div>
 
         </div>
@@ -242,31 +242,28 @@
                 <h3 id="categoryModalTitle">افزودن دسته‌بندی جدید</h3>
                 <button class="close-btn" onclick="closeModal('categoryModal')">&times;</button>
             </div>
-            <form>
+            <div>
                 <input type="hidden" id="categoryId" />
                 <div class="form-group">
                     <label>نام دسته‌بندی</label>
-                    <input type="text" id="categoryName" placeholder="مثال: شبکه‌های اجتماعی" required />
+                    <input type="text" id="categoryName" placeholder="مثال: شبکه‌های اجتماعی" />
                 </div>
                 <div class="form-group">
-                    <label>آیکون (اختیاری)</label>
+                    <label>آیکون</label>
                     <input type="text" id="categoryIcon" placeholder="مثال: 📱" />
                 </div>
                 <div class="form-group">
-                    <label>ترتیب نمایش</label>
+                    <label>ترتیب</label>
                     <input type="number" id="categoryOrder" value="0" />
                 </div>
                 <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="categoryActive" checked />
-                        فعال
-                    </label>
+                    <label><input type="checkbox" id="categoryActive" checked /> فعال</label>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-save" onclick="saveCategory()">ذخیره</button>
-                    <button type="button" class="btn-cancel" onclick="closeModal('categoryModal')">لغو</button>
+                    <button class="btn-save" onclick="saveCategory()">ذخیره</button>
+                    <button class="btn-cancel" onclick="closeModal('categoryModal')">لغو</button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -277,37 +274,32 @@
                 <h3 id="subcategoryModalTitle">افزودن زیردسته جدید</h3>
                 <button class="close-btn" onclick="closeModal('subcategoryModal')">&times;</button>
             </div>
-            <form>
+            <div>
                 <input type="hidden" id="subcategoryId" />
                 <div class="form-group">
                     <label>دسته‌بندی</label>
-                    <select id="subcategoryCategoryId" required>
-                        <option value="">انتخاب کنید...</option>
-                    </select>
+                    <select id="subcategoryCategoryId"></select>
                 </div>
                 <div class="form-group">
                     <label>نام زیردسته</label>
-                    <input type="text" id="subcategoryName" placeholder="مثال: فالوور" required />
+                    <input type="text" id="subcategoryName" placeholder="مثال: فالوور" />
                 </div>
                 <div class="form-group">
-                    <label>آیکون (اختیاری)</label>
+                    <label>آیکون</label>
                     <input type="text" id="subcategoryIcon" placeholder="مثال: 📈" />
                 </div>
                 <div class="form-group">
-                    <label>ترتیب نمایش</label>
+                    <label>ترتیب</label>
                     <input type="number" id="subcategoryOrder" value="0" />
                 </div>
                 <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="subcategoryActive" checked />
-                        فعال
-                    </label>
+                    <label><input type="checkbox" id="subcategoryActive" checked /> فعال</label>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-save" onclick="saveSubcategory()">ذخیره</button>
-                    <button type="button" class="btn-cancel" onclick="closeModal('subcategoryModal')">لغو</button>
+                    <button class="btn-save" onclick="saveSubcategory()">ذخیره</button>
+                    <button class="btn-cancel" onclick="closeModal('subcategoryModal')">لغو</button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -318,41 +310,36 @@
                 <h3 id="serviceModalTitle">افزودن سرویس جدید</h3>
                 <button class="close-btn" onclick="closeModal('serviceModal')">&times;</button>
             </div>
-            <form>
+            <div>
                 <input type="hidden" id="serviceId" />
                 <div class="form-group">
                     <label>زیردسته</label>
-                    <select id="serviceSubcategoryId" required>
-                        <option value="">انتخاب کنید...</option>
-                    </select>
+                    <select id="serviceSubcategoryId"></select>
                 </div>
                 <div class="form-group">
                     <label>نام سرویس</label>
-                    <input type="text" id="serviceName" placeholder="مثال: ۱,۰۰۰ فالوور" required />
+                    <input type="text" id="serviceName" placeholder="مثال: ۱,۰۰۰ فالوور" />
                 </div>
                 <div class="form-group">
                     <label>قیمت (AFN)</label>
-                    <input type="number" id="servicePrice" placeholder="مثال: ۱۵۰" required />
+                    <input type="number" id="servicePrice" placeholder="مثال: ۱۵۰" />
                 </div>
                 <div class="form-group">
                     <label>تخفیف (درصد)</label>
-                    <input type="number" id="serviceDiscount" value="0" placeholder="مثال: ۲۰" />
+                    <input type="number" id="serviceDiscount" value="0" />
                 </div>
                 <div class="form-group">
                     <label>توضیحات</label>
-                    <textarea id="serviceDescription" rows="3" placeholder="توضیحات کامل سرویس..."></textarea>
+                    <textarea id="serviceDescription" rows="3" placeholder="توضیحات سرویس..."></textarea>
                 </div>
                 <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="serviceActive" checked />
-                        فعال
-                    </label>
+                    <label><input type="checkbox" id="serviceActive" checked /> فعال</label>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-save" onclick="saveService()">ذخیره</button>
-                    <button type="button" class="btn-cancel" onclick="closeModal('serviceModal')">لغو</button>
+                    <button class="btn-save" onclick="saveService()">ذخیره</button>
+                    <button class="btn-cancel" onclick="closeModal('serviceModal')">لغو</button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -363,30 +350,595 @@
                 <h3 id="postModalTitle">افزودن مطلب جدید</h3>
                 <button class="close-btn" onclick="closeModal('postModal')">&times;</button>
             </div>
-            <form>
+            <div>
                 <input type="hidden" id="postId" />
                 <div class="form-group">
                     <label>عنوان</label>
-                    <input type="text" id="postTitle" placeholder="عنوان مطلب" required />
+                    <input type="text" id="postTitle" placeholder="عنوان مطلب" />
                 </div>
                 <div class="form-group">
                     <label>متن</label>
-                    <textarea id="postContent" rows="6" placeholder="متن کامل مطلب را بنویسید..." required></textarea>
+                    <textarea id="postContent" rows="5" placeholder="متن مطلب..."></textarea>
                 </div>
                 <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="postActive" checked />
-                        فعال
-                    </label>
+                    <label><input type="checkbox" id="postActive" checked /> فعال</label>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn-save" onclick="savePost()">ذخیره</button>
-                    <button type="button" class="btn-cancel" onclick="closeModal('postModal')">لغو</button>
+                    <button class="btn-save" onclick="savePost()">ذخیره</button>
+                    <button class="btn-cancel" onclick="closeModal('postModal')">لغو</button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        // ============================================
+        // متغیرهای عمومی
+        // ============================================
+        const API_URL = window.location.origin;
+        let categories = [];
+        let subcategories = [];
+        let services = [];
+        let reviews = [];
+        let posts = [];
+
+        // ============================================
+        // بررسی احراز هویت
+        // ============================================
+        async function checkAuth() {
+            try {
+                const res = await fetch(`${API_URL}/api/admin/check`, { credentials: 'include' });
+                if (!res.ok) {
+                    window.location.href = '/admin/index.html';
+                    return;
+                }
+                const data = await res.json();
+                document.getElementById('adminName').textContent = data.username || 'ادمین';
+            } catch (e) {
+                window.location.href = '/admin/index.html';
+            }
+        }
+
+        // ============================================
+        // خروج
+        // ============================================
+        async function logout() {
+            try {
+                await fetch(`${API_URL}/api/admin/logout`, { method: 'POST', credentials: 'include' });
+            } catch (e) {}
+            window.location.href = '/admin/index.html';
+        }
+
+        // ============================================
+        // نمایش بخش‌ها
+        // ============================================
+        function showSection(id) {
+            document.querySelectorAll('.admin-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('.admin-nav button').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.admin-nav button[data-section="${id}"]`).classList.add('active');
+        }
+
+        // ============================================
+        // مودال‌ها
+        // ============================================
+        function openModal(id) {
+            document.getElementById(id).classList.add('show');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+
+        // ============================================
+        // بارگذاری آمار
+        // ============================================
+        async function loadStats() {
+            try {
+                const res = await fetch(`${API_URL}/api/admin/stats`, { credentials: 'include' });
+                if (!res.ok) return;
+                const data = await res.json();
+                document.getElementById('statCategories').textContent = data.totalCategories || 0;
+                document.getElementById('statSubcategories').textContent = data.totalSubcategories || 0;
+                document.getElementById('statServices').textContent = data.totalServices || 0;
+                document.getElementById('statReviews').textContent = data.totalReviews || 0;
+                document.getElementById('statPendingReviews').textContent = data.pendingReviews || 0;
+                document.getElementById('statPosts').textContent = data.totalPosts || 0;
+            } catch (e) { console.error(e); }
+        }
+
+        // ============================================
+        // دسته‌بندی‌ها
+        // ============================================
+        async function loadCategories() {
+            try {
+                const res = await fetch(`${API_URL}/api/categories`);
+                if (!res.ok) throw new Error('Failed');
+                categories = await res.json();
+                renderCategories();
+            } catch (e) {
+                document.getElementById('categoriesTableBody').innerHTML =
+                    `<tr><td colspan="5" style="text-align:center;color:#EF4444;">خطا در بارگذاری</td></tr>`;
+            }
+        }
+
+        function renderCategories() {
+            const tbody = document.getElementById('categoriesTableBody');
+            if (!categories.length) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94A3B8;">هیچ دسته‌بندی وجود ندارد</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = categories.map(c => `
+                <tr>
+                    <td>${c.icon || '📂'}</td>
+                    <td>${c.name}</td>
+                    <td><span class="status-badge ${c.is_active ? 'active' : 'inactive'}">${c.is_active ? 'فعال' : 'غیرفعال'}</span></td>
+                    <td>${c.order || 0}</td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-edit" onclick="editCategory('${c.id}')">ویرایش</button>
+                            <button class="btn-delete" onclick="deleteCategory('${c.id}')">حذف</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function editCategory(id) {
+            const cat = categories.find(c => c.id === id);
+            if (!cat) return;
+            document.getElementById('categoryId').value = cat.id;
+            document.getElementById('categoryName').value = cat.name;
+            document.getElementById('categoryIcon').value = cat.icon || '';
+            document.getElementById('categoryOrder').value = cat.order || 0;
+            document.getElementById('categoryActive').checked = cat.is_active;
+            document.getElementById('categoryModalTitle').textContent = 'ویرایش دسته‌بندی';
+            openModal('categoryModal');
+        }
+
+        async function saveCategory() {
+            const id = document.getElementById('categoryId').value;
+            const name = document.getElementById('categoryName').value.trim();
+            const icon = document.getElementById('categoryIcon').value.trim();
+            const order = parseInt(document.getElementById('categoryOrder').value) || 0;
+            const is_active = document.getElementById('categoryActive').checked;
+
+            if (!name) { alert('نام دسته‌بندی را وارد کنید'); return; }
+
+            try {
+                const url = id ? `${API_URL}/api/categories/${id}` : `${API_URL}/api/categories`;
+                const method = id ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ name, icon, order, is_active, slug: name.replace(/\s/g, '-').toLowerCase() })
+                });
+                if (!res.ok) throw new Error('Failed');
+                closeModal('categoryModal');
+                document.getElementById('categoryId').value = '';
+                document.getElementById('categoryName').value = '';
+                document.getElementById('categoryIcon').value = '';
+                document.getElementById('categoryOrder').value = '0';
+                document.getElementById('categoryActive').checked = true;
+                document.getElementById('categoryModalTitle').textContent = 'افزودن دسته‌بندی جدید';
+                await loadCategories();
+                await loadStats();
+            } catch (e) { alert('خطا در ذخیره'); }
+        }
+
+        async function deleteCategory(id) {
+            if (!confirm('آیا از حذف این دسته‌بندی مطمئن هستید؟')) return;
+            try {
+                const res = await fetch(`${API_URL}/api/categories/${id}`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) throw new Error('Failed');
+                await loadCategories();
+                await loadStats();
+            } catch (e) { alert('خطا در حذف'); }
+        }
+
+        // ============================================
+        // زیردسته‌ها
+        // ============================================
+        async function loadSubcategories() {
+            try {
+                const res = await fetch(`${API_URL}/api/subcategories`);
+                if (!res.ok) throw new Error('Failed');
+                subcategories = await res.json();
+                renderSubcategories();
+                populateSubcategoryDropdowns();
+            } catch (e) {
+                document.getElementById('subcategoriesTableBody').innerHTML =
+                    `<tr><td colspan="5" style="text-align:center;color:#EF4444;">خطا در بارگذاری</td></tr>`;
+            }
+        }
+
+        function renderSubcategories() {
+            const tbody = document.getElementById('subcategoriesTableBody');
+            if (!subcategories.length) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94A3B8;">هیچ زیردسته‌ای وجود ندارد</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = subcategories.map(s => `
+                <tr>
+                    <td>${s.icon || '📁'}</td>
+                    <td>${s.name}</td>
+                    <td>${s.categories?.name || '-'}</td>
+                    <td><span class="status-badge ${s.is_active ? 'active' : 'inactive'}">${s.is_active ? 'فعال' : 'غیرفعال'}</span></td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-edit" onclick="editSubcategory('${s.id}')">ویرایش</button>
+                            <button class="btn-delete" onclick="deleteSubcategory('${s.id}')">حذف</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function populateSubcategoryDropdowns() {
+            const selects = ['subcategoryCategoryId', 'serviceSubcategoryId'];
+            selects.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const val = el.value;
+                el.innerHTML = '<option value="">انتخاب کنید...</option>';
+                subcategories.forEach(s => {
+                    el.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+                });
+                el.value = val;
+            });
+        }
+
+        function editSubcategory(id) {
+            const sub = subcategories.find(s => s.id === id);
+            if (!sub) return;
+            document.getElementById('subcategoryId').value = sub.id;
+            document.getElementById('subcategoryName').value = sub.name;
+            document.getElementById('subcategoryIcon').value = sub.icon || '';
+            document.getElementById('subcategoryCategoryId').value = sub.category_id || '';
+            document.getElementById('subcategoryOrder').value = sub.order || 0;
+            document.getElementById('subcategoryActive').checked = sub.is_active;
+            document.getElementById('subcategoryModalTitle').textContent = 'ویرایش زیردسته';
+            openModal('subcategoryModal');
+        }
+
+        async function saveSubcategory() {
+            const id = document.getElementById('subcategoryId').value;
+            const name = document.getElementById('subcategoryName').value.trim();
+            const icon = document.getElementById('subcategoryIcon').value.trim();
+            const category_id = document.getElementById('subcategoryCategoryId').value;
+            const order = parseInt(document.getElementById('subcategoryOrder').value) || 0;
+            const is_active = document.getElementById('subcategoryActive').checked;
+
+            if (!name || !category_id) { alert('نام و دسته‌بندی را وارد کنید'); return; }
+
+            try {
+                const url = id ? `${API_URL}/api/subcategories/${id}` : `${API_URL}/api/subcategories`;
+                const method = id ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ category_id, name, icon, order, is_active, slug: name.replace(/\s/g, '-').toLowerCase() })
+                });
+                if (!res.ok) throw new Error('Failed');
+                closeModal('subcategoryModal');
+                document.getElementById('subcategoryId').value = '';
+                document.getElementById('subcategoryName').value = '';
+                document.getElementById('subcategoryIcon').value = '';
+                document.getElementById('subcategoryOrder').value = '0';
+                document.getElementById('subcategoryActive').checked = true;
+                document.getElementById('subcategoryModalTitle').textContent = 'افزودن زیردسته جدید';
+                await loadSubcategories();
+                await loadStats();
+            } catch (e) { alert('خطا در ذخیره'); }
+        }
+
+        async function deleteSubcategory(id) {
+            if (!confirm('آیا از حذف این زیردسته مطمئن هستید؟')) return;
+            try {
+                const res = await fetch(`${API_URL}/api/subcategories/${id}`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) throw new Error('Failed');
+                await loadSubcategories();
+                await loadStats();
+            } catch (e) { alert('خطا در حذف'); }
+        }
+
+        // ============================================
+        // سرویس‌ها
+        // ============================================
+        async function loadServices() {
+            try {
+                const res = await fetch(`${API_URL}/api/services`);
+                if (!res.ok) throw new Error('Failed');
+                services = await res.json();
+                renderServices();
+            } catch (e) {
+                document.getElementById('servicesTableBody').innerHTML =
+                    `<tr><td colspan="6" style="text-align:center;color:#EF4444;">خطا در بارگذاری</td></tr>`;
+            }
+        }
+
+        function renderServices() {
+            const tbody = document.getElementById('servicesTableBody');
+            if (!services.length) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#94A3B8;">هیچ سرویسی وجود ندارد</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = services.map(s => `
+                <tr>
+                    <td>${s.icon || '📱'}</td>
+                    <td>${s.name}</td>
+                    <td>${s.price || 0} AFN</td>
+                    <td>${s.discount || 0}%</td>
+                    <td><span class="status-badge ${s.is_active ? 'active' : 'inactive'}">${s.is_active ? 'فعال' : 'غیرفعال'}</span></td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-edit" onclick="editService('${s.id}')">ویرایش</button>
+                            <button class="btn-delete" onclick="deleteService('${s.id}')">حذف</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function editService(id) {
+            const s = services.find(s => s.id === id);
+            if (!s) return;
+            document.getElementById('serviceId').value = s.id;
+            document.getElementById('serviceName').value = s.name;
+            document.getElementById('servicePrice').value = s.price || '';
+            document.getElementById('serviceDiscount').value = s.discount || 0;
+            document.getElementById('serviceDescription').value = s.description || '';
+            document.getElementById('serviceSubcategoryId').value = s.subcategory_id || '';
+            document.getElementById('serviceActive').checked = s.is_active;
+            document.getElementById('serviceModalTitle').textContent = 'ویرایش سرویس';
+            openModal('serviceModal');
+        }
+
+        async function saveService() {
+            const id = document.getElementById('serviceId').value;
+            const name = document.getElementById('serviceName').value.trim();
+            const price = parseFloat(document.getElementById('servicePrice').value) || 0;
+            const discount = parseFloat(document.getElementById('serviceDiscount').value) || 0;
+            const description = document.getElementById('serviceDescription').value.trim();
+            const subcategory_id = document.getElementById('serviceSubcategoryId').value;
+            const is_active = document.getElementById('serviceActive').checked;
+
+            if (!name || !subcategory_id) { alert('نام و زیردسته را وارد کنید'); return; }
+
+            try {
+                const url = id ? `${API_URL}/api/services/${id}` : `${API_URL}/api/services`;
+                const method = id ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ subcategory_id, name, price, discount, description, is_active, slug: name.replace(/\s/g, '-').toLowerCase() })
+                });
+                if (!res.ok) throw new Error('Failed');
+                closeModal('serviceModal');
+                document.getElementById('serviceId').value = '';
+                document.getElementById('serviceName').value = '';
+                document.getElementById('servicePrice').value = '';
+                document.getElementById('serviceDiscount').value = '0';
+                document.getElementById('serviceDescription').value = '';
+                document.getElementById('serviceActive').checked = true;
+                document.getElementById('serviceModalTitle').textContent = 'افزودن سرویس جدید';
+                await loadServices();
+                await loadStats();
+            } catch (e) { alert('خطا در ذخیره'); }
+        }
+
+        async function deleteService(id) {
+            if (!confirm('آیا از حذف این سرویس مطمئن هستید؟')) return;
+            try {
+                const res = await fetch(`${API_URL}/api/services/${id}`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) throw new Error('Failed');
+                await loadServices();
+                await loadStats();
+            } catch (e) { alert('خطا در حذف'); }
+        }
+
+        // ============================================
+        // نظرات
+        // ============================================
+        async function loadReviews() {
+            try {
+                const res = await fetch(`${API_URL}/api/reviews`);
+                if (!res.ok) throw new Error('Failed');
+                reviews = await res.json();
+                renderReviews();
+            } catch (e) {
+                document.getElementById('reviewsTableBody').innerHTML =
+                    `<tr><td colspan="5" style="text-align:center;color:#EF4444;">خطا در بارگذاری</td></tr>`;
+            }
+        }
+
+        function renderReviews() {
+            const tbody = document.getElementById('reviewsTableBody');
+            if (!reviews.length) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94A3B8;">هیچ نظری وجود ندارد</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = reviews.map(r => `
+                <tr>
+                    <td>${r.customer_name}</td>
+                    <td>${'⭐'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</td>
+                    <td>${r.comment.substring(0, 30)}${r.comment.length > 30 ? '...' : ''}</td>
+                    <td><span class="status-badge ${r.is_approved ? 'active' : 'pending'}">${r.is_approved ? '✅ تأیید شده' : '⏳ در انتظار'}</span></td>
+                    <td>
+                        <div class="actions">
+                            ${!r.is_approved ? `<button class="btn-approve" onclick="approveReview('${r.id}')">تأیید</button>` : ''}
+                            <button class="btn-delete" onclick="deleteReview('${r.id}')">حذف</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function approveReview(id) {
+            try {
+                const res = await fetch(`${API_URL}/api/reviews/${id}/approve`, { method: 'PUT', credentials: 'include' });
+                if (!res.ok) throw new Error('Failed');
+                await loadReviews();
+                await loadStats();
+            } catch (e) { alert('خطا در تأیید'); }
+        }
+
+        async function deleteReview(id) {
+            if (!confirm('آیا از حذف این نظر مطمئن هستید؟')) return;
+            try {
+                const res = await fetch(`${API_URL}/api/reviews/${id}`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) throw new Error('Failed');
+                await loadReviews();
+                await loadStats();
+            } catch (e) { alert('خطا در حذف'); }
+        }
+
+        // ============================================
+        // نشرات
+        // ============================================
+        async function loadPosts() {
+            try {
+                const res = await fetch(`${API_URL}/api/posts`);
+                if (!res.ok) throw new Error('Failed');
+                posts = await res.json();
+                renderPosts();
+            } catch (e) {
+                document.getElementById('postsTableBody').innerHTML =
+                    `<tr><td colspan="5" style="text-align:center;color:#EF4444;">خطا در بارگذاری</td></tr>`;
+            }
+        }
+
+        function renderPosts() {
+            const tbody = document.getElementById('postsTableBody');
+            if (!posts.length) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94A3B8;">هیچ مطلبی وجود ندارد</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = posts.map(p => `
+                <tr>
+                    <td>${p.title}</td>
+                    <td>${p.content.substring(0, 30)}${p.content.length > 30 ? '...' : ''}</td>
+                    <td>❤️ ${p.likes || 0}</td>
+                    <td><span class="status-badge ${p.is_active ? 'active' : 'inactive'}">${p.is_active ? 'فعال' : 'غیرفعال'}</span></td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-edit" onclick="editPost('${p.id}')">ویرایش</button>
+                            <button class="btn-delete" onclick="deletePost('${p.id}')">حذف</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function editPost(id) {
+            const p = posts.find(p => p.id === id);
+            if (!p) return;
+            document.getElementById('postId').value = p.id;
+            document.getElementById('postTitle').value = p.title;
+            document.getElementById('postContent').value = p.content;
+            document.getElementById('postActive').checked = p.is_active;
+            document.getElementById('postModalTitle').textContent = 'ویرایش مطلب';
+            openModal('postModal');
+        }
+
+        async function savePost() {
+            const id = document.getElementById('postId').value;
+            const title = document.getElementById('postTitle').value.trim();
+            const content = document.getElementById('postContent').value.trim();
+            const is_active = document.getElementById('postActive').checked;
+
+            if (!title || !content) { alert('عنوان و متن را وارد کنید'); return; }
+
+            try {
+                const url = id ? `${API_URL}/api/posts/${id}` : `${API_URL}/api/posts`;
+                const method = id ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ title, content, is_active })
+                });
+                if (!res.ok) throw new Error('Failed');
+                closeModal('postModal');
+                document.getElementById('postId').value = '';
+                document.getElementById('postTitle').value = '';
+                document.getElementById('postContent').value = '';
+                document.getElementById('postActive').checked = true;
+                document.getElementById('postModalTitle').textContent = 'افزودن مطلب جدید';
+                await loadPosts();
+                await loadStats();
+            } catch (e) { alert('خطا در ذخیره'); }
+        }
+
+        async function deletePost(id) {
+            if (!confirm('آیا از حذف این مطلب مطمئن هستید؟')) return;
+            try {
+                const res = await fetch(`${API_URL}/api/posts/${id}`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) throw new Error('Failed');
+                await loadPosts();
+                await loadStats();
+            } catch (e) { alert('خطا در حذف'); }
+        }
+
+        // ============================================
+        // تنظیمات
+        // ============================================
+        async function loadSettings() {
+            try {
+                const res = await fetch(`${API_URL}/api/settings`);
+                if (!res.ok) throw new Error('Failed');
+                const data = await res.json();
+                document.getElementById('settingSiteName').value = data.site_name || '';
+                document.getElementById('settingWhatsapp').value = data.whatsapp_number || '';
+                document.getElementById('settingTelegram').value = data.telegram_link || '';
+                document.getElementById('settingFacebook').value = data.facebook_link || '';
+                document.getElementById('settingInstagram').value = data.instagram_link || '';
+                document.getElementById('settingFooter').value = data.footer_text || '';
+                document.getElementById('settingAnnouncement').value = data.announcement || '';
+            } catch (e) { console.error(e); }
+        }
+
+        async function saveSettings() {
+            const data = {
+                site_name: document.getElementById('settingSiteName').value.trim(),
+                whatsapp_number: document.getElementById('settingWhatsapp').value.trim(),
+                telegram_link: document.getElementById('settingTelegram').value.trim(),
+                facebook_link: document.getElementById('settingFacebook').value.trim(),
+                instagram_link: document.getElementById('settingInstagram').value.trim(),
+                footer_text: document.getElementById('settingFooter').value.trim(),
+                announcement: document.getElementById('settingAnnouncement').value.trim()
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/api/settings`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(data)
+                });
+                if (!res.ok) throw new Error('Failed');
+                alert('تنظیمات با موفقیت ذخیره شد!');
+            } catch (e) { alert('خطا در ذخیره تنظیمات'); }
+        }
+
+        // ============================================
+        // بارگذاری اولیه
+        // ============================================
+        document.addEventListener('DOMContentLoaded', async function() {
+            await checkAuth();
+            await loadStats();
+            await loadCategories();
+            await loadSubcategories();
+            await loadServices();
+            await loadReviews();
+            await loadPosts();
+            await loadSettings();
+        });
+
+        console.log('✅ پنل مدیریت OMH بارگذاری شد!');
+    </script>
 </body>
 </html>
