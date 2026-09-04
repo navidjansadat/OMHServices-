@@ -12,11 +12,11 @@ if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const username = document.getElementById('username').value.trim();
+        const username = document.getElementById('username').value;
         const password = document.getElementById('password').value.trim();
 
-        if (!username || !password) {
-            showLoginError('لطفاً همه فیلدها را پر کنید');
+        if (!password) {
+            showLoginError('لطفاً رمز عبور را وارد کنید');
             return;
         }
 
@@ -34,7 +34,6 @@ if (loginForm) {
                 return;
             }
 
-            // ورود موفق
             window.location.href = '/admin/dashboard.html';
 
         } catch (error) {
@@ -90,32 +89,24 @@ async function logout() {
 // ============================================
 if (document.querySelector('.admin-dashboard')) {
     document.addEventListener('DOMContentLoaded', async () => {
-        // بررسی احراز هویت
         const admin = await checkAuth();
         if (!admin) return;
 
-        // نمایش نام کاربر
         const userSpan = document.querySelector('.admin-user span');
         if (userSpan) userSpan.textContent = admin.username;
 
-        // دکمه خروج
         const logoutBtn = document.querySelector('.logout-btn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', logout);
         }
 
-        // بارگذاری آمار
         loadStats();
-
-        // بارگذاری داده‌ها
         loadCategories();
         loadSubcategories();
         loadServices();
         loadReviews();
         loadPosts();
         loadSettings();
-
-        // رویدادهای ناوبری
         setupNavigation();
     });
 }
@@ -352,7 +343,6 @@ function showSubcategoryModal(subcategory = null) {
     const order = document.getElementById('subcategoryOrder');
     const active = document.getElementById('subcategoryActive');
 
-    // پر کردن dropdown دسته‌بندی‌ها
     categoryId.innerHTML = '<option value="">انتخاب دسته‌بندی</option>';
     categoriesData.forEach(cat => {
         categoryId.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
@@ -441,10 +431,436 @@ async function deleteSubcategory(id) {
 }
 
 // ============================================
-// ===== توابع کمکی =====
+// ===== مدیریت Services =====
 // ============================================
+let servicesData = [];
 
-// این توابع برای سایر بخش‌ها (Services, Reviews, Posts, Settings)
-// در ادامه اضافه می‌شوند. فعلاً این کافی است.
+async function loadServices() {
+    try {
+        const response = await fetch(`${API_URL}/api/services`);
+        if (!response.ok) throw new Error('Failed to load services');
+        servicesData = await response.json();
+        renderServices();
+    } catch (error) {
+        console.error('Error loading services:', error);
+    }
+}
 
-console.log('✅ Admin panel loaded successfully!');
+function renderServices() {
+    const tbody = document.querySelector('#servicesTable tbody');
+    if (!tbody) return;
+
+    if (!servicesData || servicesData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#94A3B8;">هیچ سرویسی وجود ندارد</td></tr>`;
+        return;
+    }
+
+    let html = '';
+    servicesData.forEach(service => {
+        const status = service.is_active ? '<span class="status-badge active">فعال</span>' : '<span class="status-badge inactive">غیرفعال</span>';
+        html += `
+            <tr>
+                <td>${service.icon || '📱'}</td>
+                <td>${service.name}</td>
+                <td>${service.price || 0} AFN</td>
+                <td>${service.discount || 0}%</td>
+                <td>${status}</td>
+                <td>
+                    <div class="actions">
+                        <button class="btn-edit" onclick="editService('${service.id}')">ویرایش</button>
+                        <button class="btn-delete" onclick="deleteService('${service.id}')">حذف</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
+
+function showServiceModal(service = null) {
+    const modal = document.getElementById('serviceModal');
+    if (!modal) return;
+
+    const title = document.getElementById('serviceModalTitle');
+    const id = document.getElementById('serviceId');
+    const name = document.getElementById('serviceName');
+    const price = document.getElementById('servicePrice');
+    const discount = document.getElementById('serviceDiscount');
+    const description = document.getElementById('serviceDescription');
+    const subcategoryId = document.getElementById('serviceSubcategoryId');
+    const active = document.getElementById('serviceActive');
+
+    // پر کردن dropdown زیردسته‌ها
+    subcategoryId.innerHTML = '<option value="">انتخاب زیردسته</option>';
+    subcategoriesData.forEach(sub => {
+        subcategoryId.innerHTML += `<option value="${sub.id}">${sub.name}</option>`;
+    });
+
+    if (service) {
+        title.textContent = 'ویرایش سرویس';
+        id.value = service.id;
+        name.value = service.name;
+        price.value = service.price || '';
+        discount.value = service.discount || 0;
+        description.value = service.description || '';
+        subcategoryId.value = service.subcategory_id || '';
+        active.checked = service.is_active;
+    } else {
+        title.textContent = 'افزودن سرویس جدید';
+        id.value = '';
+        name.value = '';
+        price.value = '';
+        discount.value = 0;
+        description.value = '';
+        subcategoryId.value = '';
+        active.checked = true;
+    }
+
+    modal.classList.add('show');
+}
+
+async function saveService() {
+    const id = document.getElementById('serviceId').value;
+    const name = document.getElementById('serviceName').value.trim();
+    const price = parseFloat(document.getElementById('servicePrice').value) || 0;
+    const discount = parseFloat(document.getElementById('serviceDiscount').value) || 0;
+    const description = document.getElementById('serviceDescription').value.trim();
+    const subcategory_id = document.getElementById('serviceSubcategoryId').value;
+    const is_active = document.getElementById('serviceActive').checked;
+
+    if (!name || !subcategory_id) {
+        alert('لطفاً همه فیلدهای ضروری را پر کنید');
+        return;
+    }
+
+    try {
+        const url = id ? `${API_URL}/api/services/${id}` : `${API_URL}/api/services`;
+        const method = id ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                subcategory_id,
+                name,
+                price,
+                discount,
+                description,
+                is_active,
+                slug: name.replace(/\s/g, '-').toLowerCase()
+            })
+        });
+
+        if (!response.ok) throw new Error('Failed to save service');
+
+        closeModal('serviceModal');
+        loadServices();
+        loadStats();
+
+    } catch (error) {
+        console.error('Error saving service:', error);
+        alert('خطا در ذخیره سرویس');
+    }
+}
+
+async function editService(id) {
+    const service = servicesData.find(s => s.id === id);
+    if (service) showServiceModal(service);
+}
+
+async function deleteService(id) {
+    if (!confirm('آیا از حذف این سرویس مطمئن هستید؟')) return;
+
+    try {
+        const response = await fetch(`${API_URL}/api/services/${id}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to delete service');
+
+        loadServices();
+        loadStats();
+
+    } catch (error) {
+        console.error('Error deleting service:', error);
+        alert('خطا در حذف سرویس');
+    }
+}
+
+// ============================================
+// ===== مدیریت Reviews =====
+// ============================================
+let reviewsData = [];
+
+async function loadReviews() {
+    try {
+        const response = await fetch(`${API_URL}/api/reviews`);
+        if (!response.ok) throw new Error('Failed to load reviews');
+        reviewsData = await response.json();
+        renderReviews();
+    } catch (error) {
+        console.error('Error loading reviews:', error);
+    }
+}
+
+function renderReviews() {
+    const tbody = document.querySelector('#reviewsTable tbody');
+    if (!tbody) return;
+
+    if (!reviewsData || reviewsData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94A3B8;">هیچ نظری وجود ندارد</td></tr>`;
+        return;
+    }
+
+    let html = '';
+    reviewsData.forEach(review => {
+        const stars = '⭐'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+        html += `
+            <tr>
+                <td>${review.customer_name}</td>
+                <td>${stars}</td>
+                <td>${review.comment.substring(0, 30)}...</td>
+                <td>${review.is_approved ? '✅ تأیید شده' : '⏳ در انتظار'}</td>
+                <td>
+                    <div class="actions">
+                        ${!review.is_approved ? `<button class="btn-approve" onclick="approveReview('${review.id}')">تأیید</button>` : ''}
+                        <button class="btn-delete" onclick="deleteReview('${review.id}')">حذف</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
+
+async function approveReview(id) {
+    try {
+        const response = await fetch(`${API_URL}/api/reviews/${id}/approve`, {
+            method: 'PUT',
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to approve review');
+
+        loadReviews();
+        loadStats();
+
+    } catch (error) {
+        console.error('Error approving review:', error);
+        alert('خطا در تأیید نظر');
+    }
+}
+
+async function deleteReview(id) {
+    if (!confirm('آیا از حذف این نظر مطمئن هستید؟')) return;
+
+    try {
+        const response = await fetch(`${API_URL}/api/reviews/${id}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to delete review');
+
+        loadReviews();
+        loadStats();
+
+    } catch (error) {
+        console.error('Error deleting review:', error);
+        alert('خطا در حذف نظر');
+    }
+}
+
+// ============================================
+// ===== مدیریت Posts =====
+// ============================================
+let postsData = [];
+
+async function loadPosts() {
+    try {
+        const response = await fetch(`${API_URL}/api/posts`);
+        if (!response.ok) throw new Error('Failed to load posts');
+        postsData = await response.json();
+        renderPosts();
+    } catch (error) {
+        console.error('Error loading posts:', error);
+    }
+}
+
+function renderPosts() {
+    const tbody = document.querySelector('#postsTable tbody');
+    if (!tbody) return;
+
+    if (!postsData || postsData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94A3B8;">هیچ مطلبی وجود ندارد</td></tr>`;
+        return;
+    }
+
+    let html = '';
+    postsData.forEach(post => {
+        const status = post.is_active ? '<span class="status-badge active">فعال</span>' : '<span class="status-badge inactive">غیرفعال</span>';
+        html += `
+            <tr>
+                <td>${post.title}</td>
+                <td>${post.content.substring(0, 30)}...</td>
+                <td>❤️ ${post.likes || 0}</td>
+                <td>${status}</td>
+                <td>
+                    <div class="actions">
+                        <button class="btn-edit" onclick="editPost('${post.id}')">ویرایش</button>
+                        <button class="btn-delete" onclick="deletePost('${post.id}')">حذف</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
+
+function showPostModal(post = null) {
+    const modal = document.getElementById('postModal');
+    if (!modal) return;
+
+    const title = document.getElementById('postModalTitle');
+    const id = document.getElementById('postId');
+    const name = document.getElementById('postTitle');
+    const content = document.getElementById('postContent');
+    const active = document.getElementById('postActive');
+
+    if (post) {
+        title.textContent = 'ویرایش مطلب';
+        id.value = post.id;
+        name.value = post.title;
+        content.value = post.content;
+        active.checked = post.is_active;
+    } else {
+        title.textContent = 'افزودن مطلب جدید';
+        id.value = '';
+        name.value = '';
+        content.value = '';
+        active.checked = true;
+    }
+
+    modal.classList.add('show');
+}
+
+async function savePost() {
+    const id = document.getElementById('postId').value;
+    const title = document.getElementById('postTitle').value.trim();
+    const content = document.getElementById('postContent').value.trim();
+    const is_active = document.getElementById('postActive').checked;
+
+    if (!title || !content) {
+        alert('لطفاً عنوان و متن را وارد کنید');
+        return;
+    }
+
+    try {
+        const url = id ? `${API_URL}/api/posts/${id}` : `${API_URL}/api/posts`;
+        const method = id ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ title, content, is_active })
+        });
+
+        if (!response.ok) throw new Error('Failed to save post');
+
+        closeModal('postModal');
+        loadPosts();
+        loadStats();
+
+    } catch (error) {
+        console.error('Error saving post:', error);
+        alert('خطا در ذخیره مطلب');
+    }
+}
+
+async function editPost(id) {
+    const post = postsData.find(p => p.id === id);
+    if (post) showPostModal(post);
+}
+
+async function deletePost(id) {
+    if (!confirm('آیا از حذف این مطلب مطمئن هستید؟')) return;
+
+    try {
+        const response = await fetch(`${API_URL}/api/posts/${id}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to delete post');
+
+        loadPosts();
+        loadStats();
+
+    } catch (error) {
+        console.error('Error deleting post:', error);
+        alert('خطا در حذف مطلب');
+    }
+}
+
+// ============================================
+// ===== مدیریت Settings =====
+// ============================================
+let settingsData = {};
+
+async function loadSettings() {
+    try {
+        const response = await fetch(`${API_URL}/api/settings`);
+        if (!response.ok) throw new Error('Failed to load settings');
+        settingsData = await response.json();
+        renderSettings();
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
+function renderSettings() {
+    const form = document.getElementById('settingsForm');
+    if (!form) return;
+
+    // پر کردن فیلدها با مقادیر موجود
+    document.getElementById('settingSiteName').value = settingsData.site_name || '';
+    document.getElementById('settingWhatsapp').value = settingsData.whatsapp_number || '';
+    document.getElementById('settingTelegram').value = settingsData.telegram_link || '';
+    document.getElementById('settingFacebook').value = settingsData.facebook_link || '';
+    document.getElementById('settingInstagram').value = settingsData.instagram_link || '';
+    document.getElementById('settingFooter').value = settingsData.footer_text || '';
+    document.getElementById('settingAnnouncement').value = settingsData.announcement || '';
+}
+
+async function saveSettings() {
+    const updates = {
+        site_name: document.getElementById('settingSiteName').value.trim(),
+        whatsapp_number: document.getElementById('settingWhatsapp').value.trim(),
+        telegram_link: document.getElementById('settingTelegram').value.trim(),
+        facebook_link: document.getElementById('settingFacebook').value.trim(),
+        instagram_link: document.getElementById('settingInstagram').value.trim(),
+        footer_text: document.getElementById('settingFooter').value.trim(),
+        announcement: document.getElementById('settingAnnouncement').value.trim()
+    };
+
+    try {
+        const response = await fetch(`${API_URL}/api/settings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(updates)
+        });
+
+        if (!response.ok) throw new Error('Failed to save settings');
+
+        alert('تنظیمات با موفقیت ذخیره شد!');
+        loadSettings();
+
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        alert('خطا در ذخیره تنظیمات');
+    }
+}
