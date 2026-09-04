@@ -4,693 +4,270 @@ import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import cookieParser from 'cookie-parser';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+if (!process.env.SUPABASE_URL || !(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)) {
+    console.warn('⚠️ SUPABASE_URL and a Supabase key are required.');
+}
 
 const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY
+    process.env.SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '',
+    { auth: { persistSession: false, autoRefreshToken: false } }
 );
 
-app.use(cors({
-    origin: ['http://localhost:3000', 'https://your-frontend.onrender.com'],
-    credentials: true
-}));
-app.use(express.json());
+const allowedOrigins = (process.env.FRONTEND_ORIGINS || `http://localhost:${PORT},http://localhost:3000`).split(',').map(v => v.trim()).filter(Boolean);
+const publicSettings = new Set(['site_name', 'whatsapp', 'telegram', 'facebook', 'instagram', 'footer_text', 'announcement', 'logo_url', 'favicon_url']);
+const settingValidators = {
+    site_name: v => stringValue(v, 100), whatsapp: v => stringValue(v, 30), telegram: v => urlValue(v),
+    facebook: v => urlValue(v), instagram: v => urlValue(v), footer_text: v => stringValue(v, 500),
+    announcement: v => stringValue(v, 500), logo_url: v => urlValue(v), favicon_url: v => urlValue(v)
+};
+
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+app.use(cors({ origin: (origin, cb) => { const sameOrigin = origin && reqOrigin(origin); if (!origin || allowedOrigins.includes(origin) || sameOrigin) return cb(null, true); return cb(new Error('Origin not allowed')); }, credentials: true }));
+function reqOrigin(origin) { return origin === `http://${process.env.HOST || 'localhost'}:${PORT}` || origin === `https://${process.env.HOST || 'localhost'}`; }
+app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
-
-// ===== سرو کردن فایل‌های استاتیک =====
-app.use(express.static('public'));
-
-// ===== صفحه اصلی =====
-app.get('/', (req, res) => {
-    res.sendFile('index.html', { root: 'public' });
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
 });
+app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
-// ===== Health Check =====
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'Server is running!' });
-});
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'تعداد تلاش‌های ورود زیاد است. چند دقیقه بعد دوباره امتحان کنید.' } });
+const writeLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 }, fileFilter: (_req, file, cb) => cb(null, /^image\/(jpeg|png|webp|gif|svg\+xml)$/.test(file.mimetype)) });
 
-// ============================================
-// ===== سیستم ادمین (ساده و بدون خطا) =====
-// ============================================
+function stringValue(value, max = 1000, required = false) {
+    if (typeof value !== 'string') return required ? null : '';
+    const v = value.trim();
+    return required && !v ? null : v.slice(0, max);
+}
+function numberValue(value, { min = -Infinity, max = Infinity, integer = false, fallback = 0 } = {}) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < min || n > max || (integer && !Number.isInteger(n))) return fallback;
+    return n;
+}
+function boolValue(value, fallback = false) { return typeof value === 'boolean' ? value : fallback; }
+function urlValue(value) {
+    if (!value) return '';
+    try { const u = new URL(String(value)); return ['https:', 'http:'].includes(u.protocol) ? u.toString().slice(0, 1000) : ''; } catch { return ''; }
+}
+function slugValue(value) { return stringValue(value, 120).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-_\u0600-\u06ff]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''); }
+function idValue(value) { return typeof value === 'string' && value.length <= 100 ? value : null; }
+function fail(res, status, message) { return res.status(status).json({ error: message }); }
+function safeError(error) { console.error(error); return 'خطای داخلی سرور'; }
+function publicRows(data) { return Array.isArray(data) ? data : []; }
 
-// ===== Admin Login =====
-app.post('/api/admin/login', async (req, res) => {
+async function getAdmin(req) {
+    const token = req.cookies?.admin_session;
+    if (!token) return null;
+    const { data, error } = await supabase.from('admins').select('id,username,session_expiry').eq('session_token', token).gt('session_expiry', new Date().toISOString()).maybeSingle();
+    return error || !data ? null : data;
+}
+async function requireAdmin(req, res, next) {
     try {
-        const { username, password } = req.body;
-        console.log(`تلاش برای ورود: ${username}`);
+        const admin = await getAdmin(req);
+        if (!admin) return fail(res, 401, 'Unauthorized');
+        req.admin = admin;
+        next();
+    } catch { return fail(res, 401, 'Unauthorized'); }
+}
 
-        const { data: adminData, error: adminError } = await supabase
-            .from('admins')
-            .select('*')
-            .eq('username', username)
-            .single();
-
-        if (adminError || !adminData) {
-            console.log('❌ کاربر پیدا نشد');
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-
-        console.log('✅ کاربر پیدا شد:', adminData.username);
-
-        if (adminData.password !== password) {
-            console.log('❌ رمز عبور اشتباه است');
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-
-        console.log('✅ رمز عبور درست است!');
-
-        const sessionToken = crypto.randomBytes(64).toString('hex');
-        const sessionExpiry = new Date();
-        sessionExpiry.setHours(sessionExpiry.getHours() + 24);
-
-        await supabase
-            .from('admins')
-            .update({
-                session_token: sessionToken,
-                session_expiry: sessionExpiry.toISOString(),
-                last_login: new Date().toISOString()
-            })
-            .eq('id', adminData.id);
-
-        res.cookie('admin_session', sessionToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: 24 * 60 * 60 * 1000,
-            sameSite: 'lax'
-        });
-
-        res.json({ message: '✅ ورود موفق!', username: adminData.username });
-
-    } catch (error) {
-        console.error('❌ خطای سرور:', error);
-        res.status(500).json({ error: 'خطای داخلی سرور' });
-    }
-});
-
-// ===== Admin Check =====
-app.get('/api/admin/check', async (req, res) => {
+async function storageRemoveByUrl(url) {
+    if (!url || !process.env.SUPABASE_URL) return;
     try {
-        const sessionToken = req.cookies?.admin_session;
-        if (!sessionToken) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
+        const parsed = new URL(url);
+        const marker = '/storage/v1/object/public/';
+        const idx = parsed.pathname.indexOf(marker);
+        if (idx === -1) return;
+        const rest = parsed.pathname.slice(idx + marker.length);
+        const slash = rest.indexOf('/');
+        if (slash === -1) return;
+        const bucket = rest.slice(0, slash);
+        const objectPath = rest.slice(slash + 1);
+        await supabase.storage.from(bucket).remove([objectPath]);
+    } catch (e) { console.warn('Storage cleanup failed:', e.message); }
+}
+async function uploadImage(req, res) {
+    if (!req.file) return fail(res, 400, 'فایل تصویر ارسال نشده است.');
+    const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'omh-assets';
+    const extMap = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/svg+xml': 'svg' };
+    const ext = extMap[req.file.mimetype];
+    if (!ext) return fail(res, 400, 'فرمت تصویر مجاز نیست.');
+    const folder = stringValue(req.body.folder, 40) || 'uploads';
+    const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, '') || 'uploads';
+    const objectPath = `${safeFolder}/${uuidv4()}.${ext}`;
+    const { error } = await supabase.storage.from(bucket).upload(objectPath, req.file.buffer, { contentType: req.file.mimetype, cacheControl: '31536000', upsert: false });
+    if (error) return fail(res, 500, 'آپلود تصویر انجام نشد. مطمئن شوید Storage Bucket ساخته شده و دسترسی سرور درست است.');
+    const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+    if (!data?.publicUrl) return fail(res, 500, 'آدرس عمومی تصویر ساخته نشد.');
+    res.status(201).json({ url: data.publicUrl, path: objectPath });
+}
 
-        const { data: admin, error } = await supabase
-            .from('admins')
-            .select('*')
-            .eq('session_token', sessionToken)
-            .gt('session_expiry', new Date().toISOString())
-            .single();
+app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/admin', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html')));
+app.get('/admin/dashboard', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'dashboard.html')));
+app.get('/api/health', (_req, res) => res.json({ status: 'OK', message: 'Server is running!' }));
 
-        if (error || !admin) {
-            return res.status(401).json({ error: 'Invalid or expired session' });
-        }
-
-        res.json({ authenticated: true, username: admin.username });
-
-    } catch (error) {
-        res.status(401).json({ error: 'Unauthorized' });
-    }
-});
-
-// ===== Admin Logout =====
-app.post('/api/admin/logout', async (req, res) => {
+// Admin auth
+app.post('/api/admin/login', loginLimiter, async (req, res) => {
     try {
-        const sessionToken = req.cookies?.admin_session;
-        if (sessionToken) {
-            await supabase
-                .from('admins')
-                .update({ session_token: null, session_expiry: null })
-                .eq('session_token', sessionToken);
-        }
-        res.clearCookie('admin_session');
-        res.json({ message: 'Logged out successfully' });
-    } catch (error) {
-        res.clearCookie('admin_session');
-        res.json({ message: 'Logged out successfully' });
-    }
+        const username = stringValue(req.body?.username, 80, true);
+        const password = typeof req.body?.password === 'string' ? req.body.password : '';
+        if (!username || !password || password.length > 200) return fail(res, 400, 'نام کاربری و رمز عبور الزامی است.');
+        const { data: admin, error } = await supabase.from('admins').select('*').eq('username', username).maybeSingle();
+        if (error || !admin) return fail(res, 401, 'اطلاعات ورود نادرست است.');
+        let valid = false;
+        const stored = String(admin.password || '');
+        if (stored.startsWith('$2a$') || stored.startsWith('$2b$') || stored.startsWith('$2y$')) valid = await bcrypt.compare(password, stored);
+        else { const a = Buffer.from(stored); const b = Buffer.from(password); valid = a.length === b.length && crypto.timingSafeEqual(a, b); }
+        if (!valid) return fail(res, 401, 'اطلاعات ورود نادرست است.');
+
+        const token = crypto.randomBytes(48).toString('hex');
+        const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        const patch = { session_token: token, session_expiry: expiry, last_login: new Date().toISOString() };
+        if (!stored.startsWith('$2')) patch.password = await bcrypt.hash(password, 12);
+        const { error: updateError } = await supabase.from('admins').update(patch).eq('id', admin.id);
+        if (updateError) return fail(res, 500, 'ایجاد نشست ورود انجام نشد.');
+        res.cookie('admin_session', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 24 * 60 * 60 * 1000, path: '/' });
+        res.json({ message: 'ورود موفق', username: admin.username });
+    } catch (error) { fail(res, 500, safeError(error)); }
 });
-
-// ===== Admin Stats =====
-app.get('/api/admin/stats', async (req, res) => {
+app.get('/api/admin/check', async (req, res) => { const admin = await getAdmin(req); if (!admin) return fail(res, 401, 'Unauthorized'); res.json({ authenticated: true, username: admin.username }); });
+app.post('/api/admin/logout', async (req, res) => { try { const token = req.cookies?.admin_session; if (token) await supabase.from('admins').update({ session_token: null, session_expiry: null }).eq('session_token', token); } finally { res.clearCookie('admin_session', { path: '/' }); res.json({ message: 'Logged out' }); } });
+app.get('/api/admin/stats', requireAdmin, async (_req, res) => {
     try {
-        const sessionToken = req.cookies?.admin_session;
-        if (!sessionToken) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
-
-        const { data: admin, error } = await supabase
-            .from('admins')
-            .select('*')
-            .eq('session_token', sessionToken)
-            .gt('session_expiry', new Date().toISOString())
-            .single();
-
-        if (error || !admin) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
-
-        const [categories, subcategories, services, reviews, pendingReviews, posts] = await Promise.all([
-            supabase.from('categories').select('*', { count: 'exact', head: true }),
-            supabase.from('subcategories').select('*', { count: 'exact', head: true }),
-            supabase.from('services').select('*', { count: 'exact', head: true }),
-            supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('is_approved', true),
-            supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('is_approved', false),
-            supabase.from('posts').select('*', { count: 'exact', head: true })
+        const results = await Promise.all([
+            supabase.from('categories').select('id', { count: 'exact', head: true }),
+            supabase.from('subcategories').select('id', { count: 'exact', head: true }),
+            supabase.from('services').select('id', { count: 'exact', head: true }),
+            supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('is_approved', true),
+            supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('is_approved', false),
+            supabase.from('posts').select('id', { count: 'exact', head: true })
         ]);
-
-        res.json({
-            totalCategories: categories.count || 0,
-            totalSubcategories: subcategories.count || 0,
-            totalServices: services.count || 0,
-            totalReviews: reviews.count || 0,
-            pendingReviews: pendingReviews.count || 0,
-            totalPosts: posts.count || 0
-        });
-
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+        res.json({ totalCategories: results[0].count || 0, totalSubcategories: results[1].count || 0, totalServices: results[2].count || 0, totalReviews: results[3].count || 0, pendingReviews: results[4].count || 0, totalPosts: results[5].count || 0 });
+    } catch (error) { fail(res, 500, safeError(error)); }
 });
+app.post('/api/admin/upload', requireAdmin, writeLimiter, upload.single('file'), async (req, res) => { try { await uploadImage(req, res); } catch (error) { fail(res, 500, safeError(error)); } });
 
-// ============================================
-// ===== Categories =====
-// ============================================
-app.get('/api/categories', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('categories')
-            .select('*')
-            .eq('is_active', true)
-            .order('order', { ascending: true });
-        if (error) throw error;
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+// Public categories/subcategories
+app.get('/api/categories', async (_req, res) => { try { const { data, error } = await supabase.from('categories').select('*').eq('is_active', true).order('order', { ascending: true }); if (error) throw error; res.json(publicRows(data)); } catch (e) { fail(res, 500, safeError(e)); } });
+app.get('/api/categories/:id', async (req, res) => { try { const id = idValue(req.params.id); const { data: category, error } = await supabase.from('categories').select('*').eq('id', id).eq('is_active', true).maybeSingle(); if (error || !category) return fail(res, 404, 'دسته‌بندی پیدا نشد.'); const { data: subs } = await supabase.from('subcategories').select('*').eq('category_id', id).eq('is_active', true).order('order', { ascending: true }); res.json({ ...category, subcategories: subs || [] }); } catch (e) { fail(res, 500, safeError(e)); } });
+app.get('/api/subcategories', async (_req, res) => { try { const { data, error } = await supabase.from('subcategories').select('*, categories(id,name,slug)').eq('is_active', true).order('order', { ascending: true }); if (error) throw error; res.json(publicRows(data)); } catch (e) { fail(res, 500, safeError(e)); } });
+app.get('/api/subcategories/:id', async (req, res) => { try { const id = idValue(req.params.id); const { data: sub, error } = await supabase.from('subcategories').select('*').eq('id', id).eq('is_active', true).maybeSingle(); if (error || !sub) return fail(res, 404, 'زیردسته پیدا نشد.'); const { data: services } = await supabase.from('services').select('*').eq('subcategory_id', id).eq('is_active', true).order('order', { ascending: true }); res.json({ ...sub, services: services || [] }); } catch (e) { fail(res, 500, safeError(e)); } });
 
-app.get('/api/categories/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { data: category, error: catError } = await supabase
-            .from('categories')
-            .select('*')
-            .eq('id', id)
-            .single();
-        if (catError || !category) {
-            return res.status(404).json({ error: 'Category not found' });
-        }
-        const { data: subcategories, error: subError } = await supabase
-            .from('subcategories')
-            .select('*')
-            .eq('category_id', id)
-            .eq('is_active', true)
-            .order('order', { ascending: true });
-        res.json({ ...category, subcategories: subcategories || [] });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/categories', async (req, res) => {
-    try {
-        const { name, slug, icon, description, order } = req.body;
-        const { data, error } = await supabase
-            .from('categories')
-            .insert({ name, slug, icon, description, order })
-            .select()
-            .single();
-        if (error) throw error;
-        res.status(201).json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.put('/api/categories/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name, slug, icon, description, is_active, order } = req.body;
-        const { data, error } = await supabase
-            .from('categories')
-            .update({ name, slug, icon, description, is_active, order })
-            .eq('id', id)
-            .select()
-            .single();
-        if (error) throw error;
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.delete('/api/categories/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { error } = await supabase
-            .from('categories')
-            .delete()
-            .eq('id', id);
-        if (error) throw error;
-        res.json({ message: 'Category deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ============================================
-// ===== Subcategories =====
-// ============================================
-app.get('/api/subcategories', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('subcategories')
-            .select('*, categories(name, slug)')
-            .eq('is_active', true)
-            .order('order', { ascending: true });
-        if (error) throw error;
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get('/api/subcategories/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { data: subcategory, error: subError } = await supabase
-            .from('subcategories')
-            .select('*')
-            .eq('id', id)
-            .single();
-        if (subError || !subcategory) {
-            return res.status(404).json({ error: 'Subcategory not found' });
-        }
-        const { data: services, error: serError } = await supabase
-            .from('services')
-            .select('*')
-            .eq('subcategory_id', id)
-            .eq('is_active', true)
-            .order('order', { ascending: true });
-        res.json({ ...subcategory, services: services || [] });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/subcategories', async (req, res) => {
-    try {
-        const { category_id, name, slug, icon, order } = req.body;
-        const { data, error } = await supabase
-            .from('subcategories')
-            .insert({ category_id, name, slug, icon, order })
-            .select()
-            .single();
-        if (error) throw error;
-        res.status(201).json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.put('/api/subcategories/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { category_id, name, slug, icon, is_active, order } = req.body;
-        const { data, error } = await supabase
-            .from('subcategories')
-            .update({ category_id, name, slug, icon, is_active, order })
-            .eq('id', id)
-            .select()
-            .single();
-        if (error) throw error;
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.delete('/api/subcategories/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { error } = await supabase
-            .from('subcategories')
-            .delete()
-            .eq('id', id);
-        if (error) throw error;
-        res.json({ message: 'Subcategory deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ============================================
-// ===== Services =====
-// ============================================
+// Public services: combined filters
 app.get('/api/services', async (req, res) => {
     try {
-        const { subcategoryId, featured, search } = req.query;
-        let query = supabase
-            .from('services')
-            .select('*, subcategories(name, slug, categories(name, slug))')
-            .eq('is_active', true);
-        if (subcategoryId) {
-            query = query.eq('subcategory_id', subcategoryId);
+        const search = stringValue(req.query.search, 100);
+        const categoryId = idValue(req.query.categoryId);
+        const subcategoryId = idValue(req.query.subcategoryId);
+        const featured = req.query.featured === 'true';
+        let subIds = null;
+        if (categoryId && categoryId !== 'all') {
+            const { data: subs, error } = await supabase.from('subcategories').select('id').eq('category_id', categoryId).eq('is_active', true);
+            if (error) throw error;
+            subIds = (subs || []).map(s => s.id);
+            if (!subIds.length) return res.json([]);
         }
-        if (featured === 'true') {
-            query = query.eq('is_featured', true);
-        }
-        if (search) {
-            query = query.ilike('name', `%${search}%`);
-        }
-        const { data, error } = await query.order('order', { ascending: true });
-        if (error) throw error;
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get('/api/services/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        await supabase
-            .from('services')
-            .update({ views: supabase.rpc('increment', { row_id: id }) })
-            .eq('id', id);
-        const { data, error } = await supabase
-            .from('services')
-            .select('*, subcategories(name, slug, categories(name, slug))')
-            .eq('id', id)
-            .single();
-        if (error || !data) {
-            return res.status(404).json({ error: 'Service not found' });
-        }
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/services', async (req, res) => {
-    try {
-        const { subcategory_id, name, slug, description, short_description, price, discount, unit, image, icon, delivery_time, guarantee, is_active, is_featured, order } = req.body;
-        const { data, error } = await supabase
-            .from('services')
-            .insert({ subcategory_id, name, slug, description, short_description, price, discount, unit, image, icon, delivery_time, guarantee, is_active, is_featured, order })
-            .select()
-            .single();
-        if (error) throw error;
-        res.status(201).json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.put('/api/services/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { subcategory_id, name, slug, description, short_description, price, discount, unit, image, icon, delivery_time, guarantee, is_active, is_featured, order } = req.body;
-        const { data, error } = await supabase
-            .from('services')
-            .update({ subcategory_id, name, slug, description, short_description, price, discount, unit, image, icon, delivery_time, guarantee, is_active, is_featured, order })
-            .eq('id', id)
-            .select()
-            .single();
-        if (error) throw error;
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.delete('/api/services/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { error } = await supabase
-            .from('services')
-            .delete()
-            .eq('id', id);
-        if (error) throw error;
-        res.json({ message: 'Service deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ============================================
-// ===== Reviews =====
-// ============================================
-app.get('/api/reviews', async (req, res) => {
-    try {
-        const { serviceId } = req.query;
-        let query = supabase
-            .from('reviews')
-            .select('*')
-            .eq('is_approved', true)
-            .order('created_at', { ascending: false });
-        if (serviceId) {
-            query = query.eq('service_id', serviceId);
-        }
+        let query = supabase.from('services').select('*, subcategories(id,name,slug,category_id,categories(id,name,slug))').eq('is_active', true).order('order', { ascending: true });
+        if (subcategoryId && subcategoryId !== 'all') query = query.eq('subcategory_id', subcategoryId);
+        else if (subIds) query = query.in('subcategory_id', subIds);
+        if (featured) query = query.eq('is_featured', true);
+        if (search.length >= 2) query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,short_description.ilike.%${search}%`);
         const { data, error } = await query;
         if (error) throw error;
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+        res.json(publicRows(data));
+    } catch (e) { fail(res, 500, safeError(e)); }
+});
+app.get('/api/services/:id', async (req, res) => {
+    try {
+        const id = idValue(req.params.id);
+        const { data, error } = await supabase.from('services').select('*, subcategories(id,name,slug,category_id,categories(id,name,slug))').eq('id', id).eq('is_active', true).maybeSingle();
+        if (error || !data) return fail(res, 404, 'سرویس پیدا نشد.');
+        const current = numberValue(data.views, { min: 0, integer: true, fallback: 0 });
+        await supabase.from('services').update({ views: current + 1 }).eq('id', id);
+        res.json({ ...data, views: current + 1 });
+    } catch (e) { fail(res, 500, safeError(e)); }
 });
 
-app.post('/api/reviews', async (req, res) => {
-    try {
-        const { service_id, customer_name, rating, comment } = req.body;
-        const { data, error } = await supabase
-            .from('reviews')
-            .insert({ service_id, customer_name, rating, comment, is_approved: false })
-            .select()
-            .single();
-        if (error) throw error;
-        res.status(201).json({ message: 'Review submitted for approval', data });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+// Public reviews/posts/settings
+app.get('/api/reviews', async (req, res) => { try { let q = supabase.from('reviews').select('*').eq('is_approved', true).order('created_at', { ascending: false }); if (req.query.serviceId) q = q.eq('service_id', idValue(req.query.serviceId)); const { data, error } = await q; if (error) throw error; res.json(publicRows(data)); } catch (e) { fail(res, 500, safeError(e)); } });
+app.post('/api/reviews', writeLimiter, async (req, res) => { try { const service_id = idValue(req.body?.service_id); const customer_name = stringValue(req.body?.customer_name, 80, true); const comment = stringValue(req.body?.comment, 1000, true); const rating = numberValue(req.body?.rating, { min: 1, max: 5, integer: true, fallback: 0 }); if (!service_id || !customer_name || !comment || !rating) return fail(res, 400, 'نام، امتیاز، متن نظر و سرویس الزامی است.'); const { data: service } = await supabase.from('services').select('id').eq('id', service_id).eq('is_active', true).maybeSingle(); if (!service) return fail(res, 404, 'سرویس پیدا نشد.'); const { data, error } = await supabase.from('reviews').insert({ service_id, customer_name, rating, comment, is_approved: false }).select().single(); if (error) throw error; res.status(201).json({ message: 'نظر برای تأیید ارسال شد.', data }); } catch (e) { fail(res, 500, safeError(e)); } });
+app.get('/api/posts', async (_req, res) => { try { const { data, error } = await supabase.from('posts').select('*').eq('is_active', true).order('created_at', { ascending: false }); if (error) throw error; res.json(publicRows(data)); } catch (e) { fail(res, 500, safeError(e)); } });
+app.get('/api/settings', async (_req, res) => { try { const { data, error } = await supabase.from('settings').select('key,value'); if (error) throw error; const out = {}; for (const item of data || []) if (publicSettings.has(item.key)) out[item.key] = item.value; res.json(out); } catch (e) { fail(res, 500, safeError(e)); } });
 
-app.put('/api/reviews/:id/approve', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { data, error } = await supabase
-            .from('reviews')
-            .update({ is_approved: true })
-            .eq('id', id)
-            .select()
-            .single();
-        if (error) throw error;
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+// Admin CRUD helpers
+app.get('/api/admin/categories', requireAdmin, async (_req, res) => { try { const { data, error } = await supabase.from('categories').select('*').order('order', { ascending: true }); if (error) throw error; res.json(publicRows(data)); } catch (e) { fail(res, 500, safeError(e)); } });
+app.post('/api/categories', requireAdmin, writeLimiter, async (req, res) => { try { const name = stringValue(req.body?.name, 100, true); if (!name) return fail(res, 400, 'نام دسته‌بندی الزامی است.'); const row = { name, slug: slugValue(req.body?.slug || name), icon: stringValue(req.body?.icon, 50), description: stringValue(req.body?.description, 500), is_active: boolValue(req.body?.is_active, true), order: numberValue(req.body?.order, { min: 0, max: 999999, integer: true }) }; const { data, error } = await supabase.from('categories').insert(row).select().single(); if (error) throw error; res.status(201).json(data); } catch (e) { fail(res, 500, safeError(e)); } });
+app.put('/api/categories/:id', requireAdmin, writeLimiter, async (req, res) => { try { const row = { name: stringValue(req.body?.name, 100, true), slug: slugValue(req.body?.slug || req.body?.name), icon: stringValue(req.body?.icon, 50), description: stringValue(req.body?.description, 500), is_active: boolValue(req.body?.is_active, true), order: numberValue(req.body?.order, { min: 0, max: 999999, integer: true }) }; if (!row.name) return fail(res, 400, 'نام دسته‌بندی الزامی است.'); const { data, error } = await supabase.from('categories').update(row).eq('id', idValue(req.params.id)).select().single(); if (error) throw error; res.json(data); } catch (e) { fail(res, 500, safeError(e)); } });
+app.delete('/api/categories/:id', requireAdmin, writeLimiter, async (req, res) => { try { const id = idValue(req.params.id); const { data: subs } = await supabase.from('subcategories').select('id').eq('category_id', id).limit(1); if (subs?.length) return fail(res, 409, 'این دسته‌بندی زیردسته دارد. ابتدا زیردسته‌ها را غیرفعال/حذف کنید.'); const { error } = await supabase.from('categories').delete().eq('id', id); if (error) throw error; res.json({ message: 'حذف شد' }); } catch (e) { fail(res, 500, safeError(e)); } });
 
-app.delete('/api/reviews/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { error } = await supabase
-            .from('reviews')
-            .delete()
-            .eq('id', id);
-        if (error) throw error;
-        res.json({ message: 'Review deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+app.get('/api/admin/subcategories', requireAdmin, async (_req, res) => { try { const { data, error } = await supabase.from('subcategories').select('*, categories(id,name,slug)').order('order', { ascending: true }); if (error) throw error; res.json(publicRows(data)); } catch (e) { fail(res, 500, safeError(e)); } });
+app.post('/api/subcategories', requireAdmin, writeLimiter, async (req, res) => { try { const name = stringValue(req.body?.name, 100, true); const category_id = idValue(req.body?.category_id); if (!name || !category_id) return fail(res, 400, 'دسته‌بندی و نام الزامی است.'); const row = { category_id, name, slug: slugValue(req.body?.slug || name), icon: stringValue(req.body?.icon, 50), is_active: boolValue(req.body?.is_active, true), order: numberValue(req.body?.order, { min: 0, max: 999999, integer: true }) }; const { data, error } = await supabase.from('subcategories').insert(row).select().single(); if (error) throw error; res.status(201).json(data); } catch (e) { fail(res, 500, safeError(e)); } });
+app.put('/api/subcategories/:id', requireAdmin, writeLimiter, async (req, res) => { try { const row = { category_id: idValue(req.body?.category_id), name: stringValue(req.body?.name, 100, true), slug: slugValue(req.body?.slug || req.body?.name), icon: stringValue(req.body?.icon, 50), is_active: boolValue(req.body?.is_active, true), order: numberValue(req.body?.order, { min: 0, max: 999999, integer: true }) }; if (!row.name || !row.category_id) return fail(res, 400, 'دسته‌بندی و نام الزامی است.'); const { data, error } = await supabase.from('subcategories').update(row).eq('id', idValue(req.params.id)).select().single(); if (error) throw error; res.json(data); } catch (e) { fail(res, 500, safeError(e)); } });
+app.delete('/api/subcategories/:id', requireAdmin, writeLimiter, async (req, res) => { try { const id = idValue(req.params.id); const { data: services } = await supabase.from('services').select('id').eq('subcategory_id', id).limit(1); if (services?.length) return fail(res, 409, 'این زیردسته سرویس دارد. ابتدا سرویس‌ها را جابه‌جا یا غیرفعال کنید.'); const { error } = await supabase.from('subcategories').delete().eq('id', id); if (error) throw error; res.json({ message: 'حذف شد' }); } catch (e) { fail(res, 500, safeError(e)); } });
 
-// ============================================
-// ===== Announcements =====
-// ============================================
-app.get('/api/announcements', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('announcements')
-            .select('*')
-            .eq('is_active', true)
-            .order('created_at', { ascending: false });
-        if (error) throw error;
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+app.get('/api/admin/services', requireAdmin, async (_req, res) => { try { const { data, error } = await supabase.from('services').select('*, subcategories(id,name,slug,category_id,categories(id,name,slug))').order('order', { ascending: true }); if (error) throw error; res.json(publicRows(data)); } catch (e) { fail(res, 500, safeError(e)); } });
+function servicePayload(body) { return { subcategory_id: idValue(body?.subcategory_id), name: stringValue(body?.name, 120, true), slug: slugValue(body?.slug || body?.name), description: stringValue(body?.description, 2000), short_description: stringValue(body?.short_description, 300), price: numberValue(body?.price, { min: 0, max: 1e9 }), discount: numberValue(body?.discount, { min: 0, max: 100 }), unit: stringValue(body?.unit, 50), image: urlValue(body?.image), icon: stringValue(body?.icon, 100), delivery_time: stringValue(body?.delivery_time, 100), guarantee: stringValue(body?.guarantee, 200), is_active: boolValue(body?.is_active, true), is_featured: boolValue(body?.is_featured, false), order: numberValue(body?.order, { min: 0, max: 999999, integer: true }) }; }
+app.post('/api/services', requireAdmin, writeLimiter, async (req, res) => { try { const row = servicePayload(req.body); if (!row.name || !row.subcategory_id) return fail(res, 400, 'زیردسته و نام سرویس الزامی است.'); const { data, error } = await supabase.from('services').insert(row).select().single(); if (error) throw error; res.status(201).json(data); } catch (e) { fail(res, 500, safeError(e)); } });
+app.put('/api/services/:id', requireAdmin, writeLimiter, async (req, res) => { try { const id = idValue(req.params.id); const { data: old } = await supabase.from('services').select('image').eq('id', id).maybeSingle(); const row = servicePayload(req.body); if (req.body?.remove_image === true) row.image = ''; if (!row.name || !row.subcategory_id) return fail(res, 400, 'زیردسته و نام سرویس الزامی است.'); const { data, error } = await supabase.from('services').update(row).eq('id', id).select().single(); if (error) throw error; if (old?.image && old.image !== row.image) await storageRemoveByUrl(old.image); res.json(data); } catch (e) { fail(res, 500, safeError(e)); } });
+app.delete('/api/services/:id', requireAdmin, writeLimiter, async (req, res) => { try { const id = idValue(req.params.id); const { data: old } = await supabase.from('services').select('image').eq('id', id).maybeSingle(); const { error } = await supabase.from('services').delete().eq('id', id); if (error) throw error; if (old?.image) await storageRemoveByUrl(old.image); res.json({ message: 'حذف شد' }); } catch (e) { fail(res, 500, safeError(e)); } });
 
-app.post('/api/announcements', async (req, res) => {
-    try {
-        const { title, content, icon } = req.body;
-        const { data, error } = await supabase
-            .from('announcements')
-            .insert({ title, content, icon })
-            .select()
-            .single();
-        if (error) throw error;
-        res.status(201).json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+app.get('/api/admin/reviews', requireAdmin, async (_req, res) => { try { const { data, error } = await supabase.from('reviews').select('*').order('created_at', { ascending: false }); if (error) throw error; res.json(publicRows(data)); } catch (e) { fail(res, 500, safeError(e)); } });
+app.put('/api/reviews/:id/approve', requireAdmin, writeLimiter, async (req, res) => { try { const { data, error } = await supabase.from('reviews').update({ is_approved: true }).eq('id', idValue(req.params.id)).select().single(); if (error) throw error; res.json(data); } catch (e) { fail(res, 500, safeError(e)); } });
+app.put('/api/reviews/:id/reject', requireAdmin, writeLimiter, async (req, res) => { try { const { data, error } = await supabase.from('reviews').update({ is_approved: false }).eq('id', idValue(req.params.id)).select().single(); if (error) throw error; res.json(data); } catch (e) { fail(res, 500, safeError(e)); } });
+app.delete('/api/reviews/:id', requireAdmin, writeLimiter, async (req, res) => { try { const { error } = await supabase.from('reviews').delete().eq('id', idValue(req.params.id)); if (error) throw error; res.json({ message: 'حذف شد' }); } catch (e) { fail(res, 500, safeError(e)); } });
 
-app.put('/api/announcements/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { title, content, icon, is_active } = req.body;
-        const { data, error } = await supabase
-            .from('announcements')
-            .update({ title, content, icon, is_active })
-            .eq('id', id)
-            .select()
-            .single();
-        if (error) throw error;
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+app.get('/api/admin/posts', requireAdmin, async (_req, res) => { try { const { data, error } = await supabase.from('posts').select('*').order('created_at', { ascending: false }); if (error) throw error; res.json(publicRows(data)); } catch (e) { fail(res, 500, safeError(e)); } });
+app.post('/api/posts', requireAdmin, writeLimiter, async (req, res) => { try { const title = stringValue(req.body?.title, 160, true); const content = stringValue(req.body?.content, 5000, true); if (!title || !content) return fail(res, 400, 'عنوان و متن الزامی است.'); const { data, error } = await supabase.from('posts').insert({ title, content, is_active: boolValue(req.body?.is_active, true) }).select().single(); if (error) throw error; res.status(201).json(data); } catch (e) { fail(res, 500, safeError(e)); } });
+app.put('/api/posts/:id', requireAdmin, writeLimiter, async (req, res) => { try { const title = stringValue(req.body?.title, 160, true); const content = stringValue(req.body?.content, 5000, true); if (!title || !content) return fail(res, 400, 'عنوان و متن الزامی است.'); const { data, error } = await supabase.from('posts').update({ title, content, is_active: boolValue(req.body?.is_active, true) }).eq('id', idValue(req.params.id)).select().single(); if (error) throw error; res.json(data); } catch (e) { fail(res, 500, safeError(e)); } });
+app.delete('/api/posts/:id', requireAdmin, writeLimiter, async (req, res) => { try { const { error } = await supabase.from('posts').delete().eq('id', idValue(req.params.id)); if (error) throw error; res.json({ message: 'حذف شد' }); } catch (e) { fail(res, 500, safeError(e)); } });
+app.post('/api/posts/:id/like', writeLimiter, async (req, res) => { try { const id = idValue(req.params.id); const { data: post, error: getError } = await supabase.from('posts').select('likes').eq('id', id).eq('is_active', true).maybeSingle(); if (getError || !post) return fail(res, 404, 'پست پیدا نشد.'); const likes = numberValue(post.likes, { min: 0, integer: true }) + 1; const { data, error } = await supabase.from('posts').update({ likes }).eq('id', id).select().single(); if (error) throw error; res.json(data); } catch (e) { fail(res, 500, safeError(e)); } });
 
-app.delete('/api/announcements/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { error } = await supabase
-            .from('announcements')
-            .delete()
-            .eq('id', id);
-        if (error) throw error;
-        res.json({ message: 'Announcement deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+app.get('/api/admin/announcements', requireAdmin, async (_req, res) => { try { const { data, error } = await supabase.from('announcements').select('*').order('created_at', { ascending: false }); if (error) throw error; res.json(publicRows(data)); } catch (e) { fail(res, 500, safeError(e)); } });
+app.get('/api/announcements', async (_req, res) => { try { const { data, error } = await supabase.from('announcements').select('*').eq('is_active', true).order('created_at', { ascending: false }); if (error) throw error; res.json(publicRows(data)); } catch (e) { fail(res, 500, safeError(e)); } });
+app.post('/api/announcements', requireAdmin, writeLimiter, async (req, res) => { try { const row = { title: stringValue(req.body?.title, 160, true), content: stringValue(req.body?.content, 1000, true), icon: stringValue(req.body?.icon, 50), is_active: boolValue(req.body?.is_active, true) }; if (!row.title || !row.content) return fail(res, 400, 'عنوان و متن الزامی است.'); const { data, error } = await supabase.from('announcements').insert(row).select().single(); if (error) throw error; res.status(201).json(data); } catch (e) { fail(res, 500, safeError(e)); } });
+app.put('/api/announcements/:id', requireAdmin, writeLimiter, async (req, res) => { try { const row = { title: stringValue(req.body?.title, 160, true), content: stringValue(req.body?.content, 1000, true), icon: stringValue(req.body?.icon, 50), is_active: boolValue(req.body?.is_active, true) }; const { data, error } = await supabase.from('announcements').update(row).eq('id', idValue(req.params.id)).select().single(); if (error) throw error; res.json(data); } catch (e) { fail(res, 500, safeError(e)); } });
+app.delete('/api/announcements/:id', requireAdmin, writeLimiter, async (req, res) => { try { const { error } = await supabase.from('announcements').delete().eq('id', idValue(req.params.id)); if (error) throw error; res.json({ message: 'حذف شد' }); } catch (e) { fail(res, 500, safeError(e)); } });
 
-// ============================================
-// ===== Settings =====
-// ============================================
-app.get('/api/settings', async (req, res) => {
+app.put('/api/settings', requireAdmin, writeLimiter, async (req, res) => {
     try {
-        const { data, error } = await supabase
-            .from('settings')
-            .select('*');
-        if (error) throw error;
-        const settings = {};
-        data.forEach(item => {
-            settings[item.key] = item.value;
-        });
-        res.json(settings);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.put('/api/settings', async (req, res) => {
-    try {
-        const updates = req.body;
-        for (const [key, value] of Object.entries(updates)) {
-            await supabase
-                .from('settings')
-                .update({ value })
-                .eq('key', key);
+        const updates = req.body && typeof req.body === 'object' ? req.body : {};
+        const accepted = Object.entries(updates).filter(([key]) => publicSettings.has(key));
+        let previousLogo = '';
+        if (accepted.some(([key]) => key === 'logo_url')) { const { data: oldLogo } = await supabase.from('settings').select('value').eq('key', 'logo_url').maybeSingle(); previousLogo = oldLogo?.value || ''; }
+        if (!accepted.length) return fail(res, 400, 'تنظیمات معتبر نیست.');
+        for (const [key, raw] of accepted) {
+            const value = settingValidators[key] ? settingValidators[key](raw) : stringValue(raw, 1000);
+            const { data: existing, error: findError } = await supabase.from('settings').select('key').eq('key', key).maybeSingle();
+            if (findError) throw findError;
+            if (existing) { const { error } = await supabase.from('settings').update({ value }).eq('key', key); if (error) throw error; }
+            else { const { error } = await supabase.from('settings').insert({ key, value }); if (error) throw error; }
         }
-        res.json({ message: 'Settings updated successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+        const newLogo = updates.logo_url ? String(updates.logo_url) : '';
+        if (previousLogo && previousLogo !== newLogo) await storageRemoveByUrl(previousLogo);
+        res.json({ message: 'تنظیمات ذخیره شد.' });
+    } catch (e) { fail(res, 500, safeError(e)); }
 });
 
-// ============================================
-// ===== Posts =====
-// ============================================
-app.get('/api/posts', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('posts')
-            .select('*')
-            .eq('is_active', true)
-            .order('created_at', { ascending: false });
-        if (error) throw error;
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/posts', async (req, res) => {
-    try {
-        const { title, content } = req.body;
-        const { data, error } = await supabase
-            .from('posts')
-            .insert({ title, content })
-            .select()
-            .single();
-        if (error) throw error;
-        res.status(201).json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.put('/api/posts/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { title, content, is_active } = req.body;
-        const { data, error } = await supabase
-            .from('posts')
-            .update({ title, content, is_active })
-            .eq('id', id)
-            .select()
-            .single();
-        if (error) throw error;
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.delete('/api/posts/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { error } = await supabase
-            .from('posts')
-            .delete()
-            .eq('id', id);
-        if (error) throw error;
-        res.json({ message: 'Post deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/posts/:id/like', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { data, error } = await supabase
-            .from('posts')
-            .update({ likes: supabase.rpc('increment', { row_id: id }) })
-            .eq('id', id)
-            .select()
-            .single();
-        if (error) throw error;
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ============================================
-// ===== شروع سرور =====
-// ============================================
-app.listen(PORT, () => {
-    console.log(`✅ Server running on http://localhost:${PORT}`);
-});
+app.use((err, _req, res, _next) => { console.error(err); if (!res.headersSent) res.status(500).json({ error: 'خطای داخلی سرور' }); });
+app.listen(PORT, () => console.log(`✅ OMH server running on http://localhost:${PORT}`));
