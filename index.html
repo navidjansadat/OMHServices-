@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OMH Social Services</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- Font Awesome برای آیکون‌ها -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+
+    <!-- ==================== هدر ==================== -->
+    <header id="header">
+        <div class="container header-container">
+            <div class="logo">
+                <i class="fas fa-bolt" style="color: #10B981; font-size: 24px;"></i>
+                <span>OMH</span>
+            </div>
+
+            <nav class="nav-menu" id="navMenu">
+                <a href="#home" class="active">خانه</a>
+                <a href="#services">خدمات</a>
+                <a href="#posts">نشرات</a>
+                <a href="#about">درباره ما</a>
+                <a href="#contact">تماس با ما</a>
+            </nav>
+
+            <div class="hamburger" id="hamburger">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== صفحه اصلی ==================== -->
+    <main>
+
+        <!-- ===== Hero Section ===== -->
+        <section id="home" class="hero">
+            <div class="container hero-container">
+                <div class="hero-content">
+                    <h1>خدمات دیجیتال، <span>سریع و مطمئن</span></h1>
+                    <p>
+                        ما در OMH Social Services با هدف تسهیل دسترسی شما به دنیای تکنولوژی و سرگرمی،
+                        بهترین و سریع‌ترین خدمات را ارائه می‌دهیم.
+                        <br />
+                        ⭐ کیفیت، اعتبار و امنیت؛ اولویت اصلی ماست.
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="#services" class="btn btn-primary">
+                            <i class="fas fa-eye"></i> مشاهده خدمات
+                        </a>
+                        <a href="#contact" class="btn btn-secondary">
+                            <i class="fab fa-whatsapp"></i> تماس با واتساپ
+                        </a>
+                    </div>
+                </div>
+                <div class="hero-image">
+                    <i class="fas fa-rocket" style="font-size: 120px; color: #10B981;"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== بخش اعتماد ===== -->
+        <section class="trust">
+            <div class="container trust-container">
+                <div class="trust-item">
+                    <i class="fas fa-bolt"></i>
+                    <h4>تحویل سریع</h4>
+                    <p>خدمات با سرعت بالا</p>
+                </div>
+                <div class="trust-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <h4>خدمات مطمئن</h4>
+                    <p>تمرکز بر امنیت و اعتبار</p>
+                </div>
+                <div class="trust-item">
+                    <i class="fas fa-headset"></i>
+                    <h4>پشتیبانی</h4>
+                    <p>پاسخگویی و ارتباط آسان</p>
+                </div>
+                <div class="trust-item">
+                    <i class="fas fa-star"></i>
+                    <h4>کیفیت</h4>
+                    <p>ارائه خدمات با کیفیت مناسب</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== بخش خدمات ===== -->
+        <section id="services" class="services">
+            <div class="container">
+                <div class="section-header">
+                    <h2>خدمات ما</h2>
+                    <p>خدمات دیجیتال مورد نیاز خود را انتخاب کنید.</p>
+                </div>
+
+                <!-- جستجو و فیلتر -->
+                <div class="services-filter">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="جستجوی سرویس..." />
+                    </div>
+                    <div class="filter-buttons" id="filterButtons">
+                        <button class="filter-btn active" data-category="all">همه</button>
+                        <!-- بقیه دکمه‌ها از طریق جاوااسکریپت اضافه می‌شوند -->
+                    </div>
+                </div>
+
+                <!-- لیست سرویس‌ها -->
+                <div class="services-grid" id="servicesGrid">
+                    <!-- کارت‌های سرویس از طریق جاوااسکریپت بارگذاری می‌شوند -->
+                    <p style="text-align: center; width: 100%; color: #94A3B8; padding: 40px 0;">
+                        در حال بارگذاری سرویس‌ها...
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== بخش نشرات ===== -->
+        <section id="posts" class="posts">
+            <div class="container">
+                <div class="section-header">
+                    <h2>📜 نشرات اسلامی</h2>
+                    <p>متن‌های منتخب و مطالب اسلامی برای استفاده شما</p>
+                </div>
+
+                <div class="posts-grid" id="postsGrid">
+                    <!-- متن‌ها از طریق جاوااسکریپت بارگذاری می‌شوند -->
+                    <p style="text-align: center; width: 100%; color: #94A3B8; padding: 40px 0;">
+                        در حال بارگذاری متن‌ها...
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== بخش نظرات ===== -->
+        <section class="reviews">
+            <div class="container">
+                <div class="section-header">
+                    <h2>⭐ نظرات مشتریان</h2>
+                    <p>آنچه مشتریان ما می‌گویند</p>
+                </div>
+
+                <div class="reviews-grid" id="reviewsGrid">
+                    <!-- نظرات از طریق جاوااسکریپت بارگذاری می‌شوند -->
+                    <p style="text-align: center; width: 100%; color: #94A3B8; padding: 40px 0;">
+                        در حال بارگذاری نظرات...
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== درباره ما ===== -->
+        <section id="about" class="about">
+            <div class="container">
+                <div class="section-header">
+                    <h2>درباره ما</h2>
+                </div>
+                <div class="about-content">
+                    <p>
+                        <strong>OMH Social Services</strong> یک مجموعه خدمات دیجیتال برای
+                        دسترسی آسان‌تر به سرویس‌های آنلاین و شبکه‌های اجتماعی.
+                    </p>
+                    <p>
+                        با OMH Social Services، حضور دیجیتال خود را به سطح بالاتری ببرید.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== تماس با ما ===== -->
+        <section id="contact" class="contact">
+            <div class="container">
+                <div class="section-header">
+                    <h2>📞 تماس با ما</h2>
+                    <p>از طریق شبکه‌های اجتماعی با ما در ارتباط باشید</p>
+                </div>
+
+                <div class="contact-links">
+                    <a href="#" id="whatsappLink" class="contact-item whatsapp">
+                        <i class="fab fa-whatsapp"></i>
+                        <span>WhatsApp</span>
+                    </a>
+                    <a href="#" id="telegramLink" class="contact-item telegram">
+                        <i class="fab fa-telegram"></i>
+                        <span>Telegram</span>
+                    </a>
+                    <a href="#" id="facebookLink" class="contact-item facebook">
+                        <i class="fab fa-facebook"></i>
+                        <span>Facebook</span>
+                    </a>
+                    <a href="#" id="instagramLink" class="contact-item instagram">
+                        <i class="fab fa-instagram"></i>
+                        <span>Instagram</span>
+                    </a>
+                </div>
+
+                <!-- کانال و گروپ واتساپ -->
+                <div class="whatsapp-channels">
+                    <a href="https://whatsapp.com/channel/0029VbC27wl9mrGcV1D6aa3O" target="_blank" class="channel-btn">
+                        <i class="fab fa-whatsapp"></i> کانال واتساپ
+                    </a>
+                    <a href="https://chat.whatsapp.com/LhwXxaXGEy5F4pq0GdqV5s" target="_blank" class="channel-btn">
+                        <i class="fab fa-whatsapp"></i> گروپ واتساپ
+                    </a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==================== فوتر ==================== -->
+    <footer>
+        <div class="container footer-container">
+            <div class="footer-brand">
+                <i class="fas fa-bolt" style="color: #10B981; font-size: 20px;"></i>
+                <span>OMH Social Services</span>
+            </div>
+            <div class="footer-links">
+                <a href="#home">خانه</a>
+                <a href="#services">خدمات</a>
+                <a href="#posts">نشرات</a>
+                <a href="#about">درباره ما</a>
+                <a href="#contact">تماس</a>
+            </div>
+            <div class="footer-social">
+                <a href="#" id="footerWhatsapp"><i class="fab fa-whatsapp"></i></a>
+                <a href="#" id="footerTelegram"><i class="fab fa-telegram"></i></a>
+                <a href="#" id="footerFacebook"><i class="fab fa-facebook"></i></a>
+                <a href="#" id="footerInstagram"><i class="fab fa-instagram"></i></a>
+            </div>
+            <div class="footer-copy">
+                <p>© 2026 OMH Social Services. تمامی حقوق محفوظ است.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ===== دکمه شناور واتساپ ===== -->
+    <a href="#" id="floatingWhatsapp" class="floating-whatsapp" target="_blank">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
+    <!-- ==================== جاوااسکریپت ==================== -->
+    <script src="main.js"></script>
+
+</body>
+</html>
