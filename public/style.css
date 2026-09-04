@@ -999,3 +999,13 @@ footer {
     width: 100%;
     font-size: 16px;
 }
+
+/* ===== OMH v2 enhancements ===== */
+.site-logo-img { width: 42px; height: 42px; object-fit: contain; border-radius: 10px; }
+.footer-logo-img { width: 32px; height: 32px; }
+.service-media { overflow: hidden; display:flex; align-items:center; justify-content:center; }
+.service-media img { width:100%; height:100%; object-fit:cover; border-radius:inherit; }
+.service-path { font-size: 12px; color: var(--gray-400); min-height: 18px; margin-bottom: 6px; }
+.discount { color:#EF4444; font-size:13px; font-weight:700; margin-right:8px; }
+.announcement-banner { background: var(--gray-900); color: #fff; text-align:center; padding: 10px 16px; font-size:14px; }
+.empty-message { width:100%; text-align:center; color:var(--gray-500); padding:40px 16px; }
