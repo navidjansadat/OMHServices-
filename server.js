@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
-import bcrypt from 'bcryptjs';
 import cookieParser from 'cookie-parser';
 import crypto from 'crypto';
 
@@ -59,6 +58,104 @@ const requireAuth = async (req, res, next) => {
         res.status(500).json({ error: 'Authentication failed' });
     }
 };
+
+// ===== Admin Login =====
+app.post('/api/admin/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        // پیدا کردن کاربر در جدول admins
+        const { data: adminData, error: adminError } = await supabase
+            .from('admins')
+            .select('*')
+            .eq('username', username)
+            .single();
+
+        if (adminError || !adminData) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        // بررسی رمز عبور با Supabase Auth
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: adminData.email,
+            password: password
+        });
+
+        if (error || !data.user) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        // تولید session token
+        const sessionToken = crypto.randomBytes(64).toString('hex');
+        const sessionExpiry = new Date();
+        sessionExpiry.setHours(sessionExpiry.getHours() + 24);
+
+        await supabase
+            .from('admins')
+            .update({
+                session_token: sessionToken,
+                session_expiry: sessionExpiry.toISOString(),
+                last_login: new Date().toISOString()
+            })
+            .eq('id', adminData.id);
+
+        res.cookie('admin_session', sessionToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 24 * 60 * 60 * 1000,
+            sameSite: 'lax'
+        });
+
+        res.json({ message: 'Login successful', username: adminData.username });
+
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Login failed' });
+    }
+});
+
+// ===== Admin Logout =====
+app.post('/api/admin/logout', requireAuth, async (req, res) => {
+    try {
+        await supabase
+            .from('admins')
+            .update({ session_token: null, session_expiry: null })
+            .eq('id', req.admin.id);
+        res.clearCookie('admin_session');
+        res.json({ message: 'Logged out successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ===== Admin Check =====
+app.get('/api/admin/check', requireAuth, async (req, res) => {
+    res.json({ authenticated: true, username: req.admin.username });
+});
+
+// ===== Admin Stats =====
+app.get('/api/admin/stats', requireAuth, async (req, res) => {
+    try {
+        const [categories, subcategories, services, reviews, pendingReviews, posts] = await Promise.all([
+            supabase.from('categories').select('*', { count: 'exact', head: true }),
+            supabase.from('subcategories').select('*', { count: 'exact', head: true }),
+            supabase.from('services').select('*', { count: 'exact', head: true }),
+            supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('is_approved', true),
+            supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('is_approved', false),
+            supabase.from('posts').select('*', { count: 'exact', head: true })
+        ]);
+        res.json({
+            totalCategories: categories.count || 0,
+            totalSubcategories: subcategories.count || 0,
+            totalServices: services.count || 0,
+            totalReviews: reviews.count || 0,
+            pendingReviews: pendingReviews.count || 0,
+            totalPosts: posts.count || 0
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // ===== Categories =====
 app.get('/api/categories', async (req, res) => {
@@ -478,7 +575,7 @@ app.put('/api/settings', requireAuth, async (req, res) => {
     }
 });
 
-// ===== Posts (نشرات) =====
+// ===== Posts =====
 app.get('/api/posts', async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -550,86 +647,6 @@ app.post('/api/posts/:id/like', async (req, res) => {
             .single();
         if (error) throw error;
         res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ===== Admin =====
-app.post('/api/admin/login', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        const { data: admin, error } = await supabase
-            .from('admins')
-            .select('*')
-            .eq('username', username)
-            .single();
-        if (error || !admin) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-        const isValid = await bcrypt.compare(password, admin.password_hash);
-        if (!isValid) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-        const sessionToken = crypto.randomBytes(64).toString('hex');
-        const sessionExpiry = new Date();
-        sessionExpiry.setHours(sessionExpiry.getHours() + 24);
-        await supabase
-            .from('admins')
-            .update({
-                session_token: sessionToken,
-                session_expiry: sessionExpiry.toISOString(),
-                last_login: new Date().toISOString()
-            })
-            .eq('id', admin.id);
-        res.cookie('admin_session', sessionToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: 24 * 60 * 60 * 1000,
-            sameSite: 'lax'
-        });
-        res.json({ message: 'Login successful', username: admin.username });
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Login failed' });
-    }
-});
-
-app.post('/api/admin/logout', requireAuth, async (req, res) => {
-    try {
-        await supabase
-            .from('admins')
-            .update({ session_token: null, session_expiry: null })
-            .eq('id', req.admin.id);
-        res.clearCookie('admin_session');
-        res.json({ message: 'Logged out successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get('/api/admin/check', requireAuth, async (req, res) => {
-    res.json({ authenticated: true, username: req.admin.username });
-});
-
-app.get('/api/admin/stats', requireAuth, async (req, res) => {
-    try {
-        const [categories, subcategories, services, reviews, pendingReviews, posts] = await Promise.all([
-            supabase.from('categories').select('*', { count: 'exact', head: true }),
-            supabase.from('subcategories').select('*', { count: 'exact', head: true }),
-            supabase.from('services').select('*', { count: 'exact', head: true }),
-            supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('is_approved', true),
-            supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('is_approved', false),
-            supabase.from('posts').select('*', { count: 'exact', head: true })
-        ]);
-        res.json({
-            totalCategories: categories.count || 0,
-            totalSubcategories: subcategories.count || 0,
-            totalServices: services.count || 0,
-            totalReviews: reviews.count || 0,
-            pendingReviews: pendingReviews.count || 0,
-            totalPosts: posts.count || 0
-        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
