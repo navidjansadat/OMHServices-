@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+import bcrypt from 'bcryptjs';
 import cookieParser from 'cookie-parser';
 import crypto from 'crypto';
 
@@ -64,7 +65,6 @@ app.post('/api/admin/login', async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        // پیدا کردن کاربر در جدول admins
         const { data: adminData, error: adminError } = await supabase
             .from('admins')
             .select('*')
@@ -75,17 +75,11 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // بررسی رمز عبور با Supabase Auth
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: adminData.email,
-            password: password
-        });
-
-        if (error || !data.user) {
+        const isValid = await bcrypt.compare(password, adminData.password_hash);
+        if (!isValid) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // تولید session token
         const sessionToken = crypto.randomBytes(64).toString('hex');
         const sessionExpiry = new Date();
         sessionExpiry.setHours(sessionExpiry.getHours() + 24);
