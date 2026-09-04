@@ -59,38 +59,52 @@ const requireAuth = async (req, res, next) => {
     }
 };
 
-// ===== Admin Login (بدون هش) =====
+// ===== ADMIN LOGIN (ساده و مستقیم) =====
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { username, password } = req.body;
+        console.log(`تلاش برای ورود: ${username}`); // برای دیباگ
 
+        // ۱. پیدا کردن کاربر در جدول admins
         const { data: adminData, error: adminError } = await supabase
             .from('admins')
             .select('*')
             .eq('username', username)
             .single();
 
+        // ۲. اگر کاربر وجود نداشت، خطا بده
         if (adminError || !adminData) {
+            console.log('❌ کاربر پیدا نشد:', username);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
+        console.log('✅ کاربر پیدا شد:', adminData.username);
+        console.log('✅ رمز ذخیره شده:', adminData.password);
+        console.log('✅ رمز وارد شده:', password);
+
+        // ۳. بررسی رمز عبور (تطابق دقیق)
         if (adminData.password !== password) {
+            console.log('❌ رمز عبور اشتباه است');
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const sessionToken = crypto.randomBytes(64).toString('hex');
+        console.log('✅ رمز عبور درست است!');
+
+        // ۴. تولید یک توکن ساده
+        const sessionToken = 'simple-token-' + Date.now();
         const sessionExpiry = new Date();
         sessionExpiry.setHours(sessionExpiry.getHours() + 24);
 
+        // ۵. (اختیاری) به‌روزرسانی توکن در دیتابیس
         await supabase
             .from('admins')
-            .update({
-                session_token: sessionToken,
-                session_expiry: sessionExpiry.toISOString(),
-                last_login: new Date().toISOString()
+            .update({ 
+                session_token: sessionToken, 
+                session_expiry: sessionExpiry.toISOString() 
             })
             .eq('id', adminData.id);
 
+        // ۶. تنظیم کوکی
         res.cookie('admin_session', sessionToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -98,12 +112,16 @@ app.post('/api/admin/login', async (req, res) => {
             sameSite: 'lax'
         });
 
-        res.json({ message: 'Login successful', username: adminData.username });
+        res.json({ 
+            message: '✅ ورود موفق!', 
+            username: adminData.username 
+        });
 
     } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Login failed' });
+        console.error('❌ خطای سرور:', error);
+        res.status(500).json({ error: 'خطای داخلی سرور' });
     }
+});
 });
 
 // ===== Admin Logout =====
