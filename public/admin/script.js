@@ -1,866 +1,620 @@
-// ============================================
-// OMH Social Services - Admin Panel
-// ============================================
+/* ===== تنظیمات پایه ===== */
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap');
 
-const API_URL = window.location.origin;
-
-// ===== صفحه ورود =====
-const loginForm = document.getElementById('loginForm');
-const loginError = document.getElementById('loginError');
-
-if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value.trim();
-
-        if (!password) {
-            showLoginError('لطفاً رمز عبور را وارد کنید');
-            return;
-        }
-
-        try {
-            const response = await fetch(`${API_URL}/api/admin/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                showLoginError(data.error || 'ورود ناموفق');
-                return;
-            }
-
-            window.location.href = '/admin/dashboard.html';
-
-        } catch (error) {
-            showLoginError('خطا در ارتباط با سرور');
-            console.error('Login error:', error);
-        }
-    });
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-function showLoginError(message) {
-    if (loginError) {
-        loginError.textContent = message;
-        loginError.classList.add('show');
-        setTimeout(() => loginError.classList.remove('show'), 4000);
+:root {
+    --primary: #10B981;
+    --primary-dark: #059669;
+    --primary-light: #D1FAE5;
+    --bg: #F1F5F9;
+    --white: #FFFFFF;
+    --gray-100: #F1F5F9;
+    --gray-200: #E2E8F0;
+    --gray-300: #CBD5E1;
+    --gray-400: #94A3B8;
+    --gray-500: #64748B;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1E293B;
+    --gray-900: #0F172A;
+    --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    --radius: 16px;
+    --transition: all 0.3s ease;
+}
+
+body {
+    font-family: 'Vazirmatn', sans-serif;
+    background: var(--bg);
+    color: var(--gray-800);
+    direction: rtl;
+}
+
+/* ===== صفحه ورود ===== */
+.admin-login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #ECFDF5 0%, #F1F5F9 100%);
+}
+
+.login-container {
+    width: 100%;
+    padding: 20px;
+}
+
+.login-box {
+    max-width: 400px;
+    margin: 0 auto;
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 40px 32px;
+    box-shadow: var(--shadow);
+}
+
+.login-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin-bottom: 8px;
+}
+.login-logo i {
+    color: var(--primary);
+}
+.login-logo span {
+    color: var(--primary);
+}
+
+.login-box h2 {
+    text-align: center;
+    font-size: 22px;
+    margin-top: 4px;
+}
+.login-box p {
+    text-align: center;
+    color: var(--gray-500);
+    font-size: 14px;
+    margin-bottom: 28px;
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+.form-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--gray-700);
+    margin-bottom: 6px;
+}
+.form-group label i {
+    color: var(--gray-400);
+    margin-left: 8px;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--gray-200);
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    transition: var(--transition);
+    background: var(--gray-100);
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--white);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+}
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.btn-login {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.btn-login:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(16, 185, 129, 0.3);
+}
+
+.login-error {
+    color: #EF4444;
+    font-size: 14px;
+    text-align: center;
+    margin-top: 14px;
+    display: none;
+}
+.login-error.show {
+    display: block;
+}
+
+.login-footer {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--gray-200);
+}
+.login-footer a {
+    color: var(--gray-500);
+    font-size: 14px;
+    text-decoration: none;
+    transition: var(--transition);
+}
+.login-footer a:hover {
+    color: var(--primary);
+}
+
+/* ===== داشبورد ===== */
+.admin-dashboard {
+    min-height: 100vh;
+    background: var(--bg);
+}
+
+.admin-header {
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    padding: 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.admin-header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+.admin-header .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 20px;
+    font-weight: 800;
+}
+.admin-header .logo i {
+    color: var(--primary);
+}
+.admin-header .logo span {
+    color: var(--primary);
+}
+.admin-header .admin-user {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.admin-header .admin-user span {
+    font-weight: 500;
+}
+.admin-header .admin-user .logout-btn {
+    background: none;
+    border: none;
+    color: #EF4444;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    transition: var(--transition);
+}
+.admin-header .admin-user .logout-btn:hover {
+    color: #DC2626;
+}
+
+.admin-content {
+    padding: 30px 0 60px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px 60px;
+}
+
+.admin-title {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin-bottom: 8px;
+}
+.admin-subtitle {
+    color: var(--gray-500);
+    margin-bottom: 30px;
+}
+
+/* کارت‌های آمار */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.stat-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    box-shadow: var(--shadow);
+    text-align: center;
+    transition: var(--transition);
+    border: 1px solid var(--gray-100);
+}
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+}
+.stat-card .stat-icon {
+    font-size: 32px;
+    color: var(--primary);
+    margin-bottom: 8px;
+}
+.stat-card .stat-number {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--gray-900);
+}
+.stat-card .stat-label {
+    color: var(--gray-500);
+    font-size: 14px;
+}
+
+/* منوی مدیریت */
+.admin-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--gray-200);
+}
+.admin-nav button {
+    padding: 10px 24px;
+    border-radius: 10px;
+    border: 2px solid var(--gray-200);
+    background: var(--white);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+}
+.admin-nav button:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+.admin-nav button.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+/* بخش‌های مدیریت */
+.admin-section {
+    display: none;
+}
+.admin-section.active {
+    display: block;
+}
+
+.admin-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.admin-section .section-header h3 {
+    font-size: 20px;
+    font-weight: 700;
+}
+.admin-section .section-header .btn-add {
+    padding: 10px 20px;
+    border-radius: 10px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+}
+.admin-section .section-header .btn-add:hover {
+    background: var(--primary-dark);
+}
+.admin-section .section-header .btn-save-settings {
+    padding: 10px 20px;
+    border-radius: 10px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+}
+.admin-section .section-header .btn-save-settings:hover {
+    background: var(--primary-dark);
+}
+
+.admin-table {
+    width: 100%;
+    background: var(--white);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+.admin-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.admin-table th {
+    background: var(--gray-100);
+    padding: 12px 16px;
+    text-align: right;
+    font-weight: 700;
+    color: var(--gray-700);
+    font-size: 14px;
+}
+.admin-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 14px;
+    vertical-align: middle;
+}
+.admin-table tr:hover td {
+    background: var(--gray-50);
+}
+.admin-table .actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.admin-table .actions button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+}
+.admin-table .actions .btn-edit {
+    background: #DBEAFE;
+    color: #2563EB;
+}
+.admin-table .actions .btn-edit:hover {
+    background: #BFDBFE;
+}
+.admin-table .actions .btn-delete {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+.admin-table .actions .btn-delete:hover {
+    background: #FECACA;
+}
+.admin-table .actions .btn-approve {
+    background: #D1FAE5;
+    color: #059669;
+}
+.admin-table .actions .btn-approve:hover {
+    background: #A7F3D0;
+}
+.admin-table .status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+.admin-table .status-badge.active {
+    background: #D1FAE5;
+    color: #059669;
+}
+.admin-table .status-badge.inactive {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+.admin-table .status-badge.pending {
+    background: #FEF3C7;
+    color: #D97706;
+}
+
+/* ===== مودال ===== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+    display: none;
+}
+.modal-overlay.show {
+    display: flex;
+}
+
+.modal-box {
+    background: var(--white);
+    border-radius: var(--radius);
+    max-width: 560px;
+    width: 100%;
+    padding: 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+.modal-box .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.modal-box .modal-header h3 {
+    font-size: 20px;
+    font-weight: 700;
+}
+.modal-box .modal-header .close-btn {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: var(--transition);
+}
+.modal-box .modal-header .close-btn:hover {
+    color: var(--gray-800);
+}
+
+.modal-box .form-group {
+    margin-bottom: 16px;
+}
+.modal-box .form-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--gray-700);
+    margin-bottom: 4px;
+}
+.modal-box .form-group input,
+.modal-box .form-group select,
+.modal-box .form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid var(--gray-200);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: var(--transition);
+    background: var(--gray-50);
+}
+.modal-box .form-group input:focus,
+.modal-box .form-group select:focus,
+.modal-box .form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--white);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+.modal-box .form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+.modal-box .form-group .helper {
+    font-size: 12px;
+    color: var(--gray-400);
+}
+
+.modal-box .form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+.modal-box .form-actions button {
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+}
+.modal-box .form-actions .btn-save {
+    background: var(--primary);
+    color: white;
+}
+.modal-box .form-actions .btn-save:hover {
+    background: var(--primary-dark);
+}
+.modal-box .form-actions .btn-cancel {
+    background: var(--gray-200);
+    color: var(--gray-600);
+}
+.modal-box .form-actions .btn-cancel:hover {
+    background: var(--gray-300);
+}
+
+/* ===== تنظیمات ===== */
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+.settings-grid .form-group {
+    margin-bottom: 0;
+}
+.settings-grid .full-width {
+    grid-column: 1 / -1;
+}
+
+/* ===== ریسپانسیو ===== */
+@media (max-width: 992px) {
+    .settings-grid {
+        grid-template-columns: 1fr;
     }
 }
 
-// ===== بررسی وضعیت ورود =====
-async function checkAuth() {
-    try {
-        const response = await fetch(`${API_URL}/api/admin/check`, {
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            window.location.href = '/admin/index.html';
-            return null;
-        }
-
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        window.location.href = '/admin/index.html';
-        return null;
+@media (max-width: 768px) {
+    .login-box {
+        padding: 28px 20px;
     }
-}
-
-// ===== خروج =====
-async function logout() {
-    try {
-        await fetch(`${API_URL}/api/admin/logout`, {
-            method: 'POST',
-            credentials: 'include'
-        });
-        window.location.href = '/admin/index.html';
-    } catch (error) {
-        console.error('Logout error:', error);
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
-}
-
-// ============================================
-// ===== داشبورد =====
-// ============================================
-if (document.querySelector('.admin-dashboard')) {
-    document.addEventListener('DOMContentLoaded', async () => {
-        const admin = await checkAuth();
-        if (!admin) return;
-
-        const userSpan = document.querySelector('.admin-user span');
-        if (userSpan) userSpan.textContent = admin.username;
-
-        const logoutBtn = document.querySelector('.logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', logout);
-        }
-
-        loadStats();
-        loadCategories();
-        loadSubcategories();
-        loadServices();
-        loadReviews();
-        loadPosts();
-        loadSettings();
-        setupNavigation();
-    });
-}
-
-// ===== بارگذاری آمار =====
-async function loadStats() {
-    try {
-        const response = await fetch(`${API_URL}/api/admin/stats`, {
-            credentials: 'include'
-        });
-        if (!response.ok) throw new Error('Failed to load stats');
-        const stats = await response.json();
-
-        document.getElementById('statCategories').textContent = stats.totalCategories || 0;
-        document.getElementById('statSubcategories').textContent = stats.totalSubcategories || 0;
-        document.getElementById('statServices').textContent = stats.totalServices || 0;
-        document.getElementById('statReviews').textContent = stats.totalReviews || 0;
-        document.getElementById('statPendingReviews').textContent = stats.pendingReviews || 0;
-        document.getElementById('statPosts').textContent = stats.totalPosts || 0;
-
-    } catch (error) {
-        console.error('Error loading stats:', error);
+    .admin-table {
+        overflow-x: auto;
     }
-}
-
-// ===== ناوبری =====
-function setupNavigation() {
-    const navButtons = document.querySelectorAll('.admin-nav button');
-    const sections = document.querySelectorAll('.admin-section');
-
-    navButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            navButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            sections.forEach(s => s.classList.remove('active'));
-            const target = document.getElementById(btn.dataset.section);
-            if (target) target.classList.add('active');
-        });
-    });
-}
-
-// ===== مدیریت Categories =====
-let categoriesData = [];
-
-async function loadCategories() {
-    try {
-        const response = await fetch(`${API_URL}/api/categories`);
-        if (!response.ok) throw new Error('Failed to load categories');
-        categoriesData = await response.json();
-        renderCategories();
-    } catch (error) {
-        console.error('Error loading categories:', error);
+    .admin-nav {
+        gap: 6px;
     }
-}
-
-function renderCategories() {
-    const tbody = document.querySelector('#categoriesTable tbody');
-    if (!tbody) return;
-
-    if (!categoriesData || categoriesData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94A3B8;">هیچ دسته‌بندی وجود ندارد</td></tr>`;
-        return;
+    .admin-nav button {
+        padding: 8px 14px;
+        font-size: 13px;
     }
-
-    let html = '';
-    categoriesData.forEach(cat => {
-        const status = cat.is_active ? '<span class="status-badge active">فعال</span>' : '<span class="status-badge inactive">غیرفعال</span>';
-        html += `
-            <tr>
-                <td>${cat.icon || '📂'}</td>
-                <td>${cat.name}</td>
-                <td>${status}</td>
-                <td>${cat.order || 0}</td>
-                <td>
-                    <div class="actions">
-                        <button class="btn-edit" onclick="editCategory('${cat.id}')">ویرایش</button>
-                        <button class="btn-delete" onclick="deleteCategory('${cat.id}')">حذف</button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    });
-    tbody.innerHTML = html;
-}
-
-function showCategoryModal(category = null) {
-    const modal = document.getElementById('categoryModal');
-    if (!modal) return;
-
-    const title = document.getElementById('categoryModalTitle');
-    const id = document.getElementById('categoryId');
-    const name = document.getElementById('categoryName');
-    const icon = document.getElementById('categoryIcon');
-    const order = document.getElementById('categoryOrder');
-    const active = document.getElementById('categoryActive');
-
-    if (category) {
-        title.textContent = 'ویرایش دسته‌بندی';
-        id.value = category.id;
-        name.value = category.name;
-        icon.value = category.icon || '';
-        order.value = category.order || 0;
-        active.checked = category.is_active;
-    } else {
-        title.textContent = 'افزودن دسته‌بندی جدید';
-        id.value = '';
-        name.value = '';
-        icon.value = '';
-        order.value = 0;
-        active.checked = true;
+    .modal-box {
+        padding: 24px 16px;
     }
-
-    modal.classList.add('show');
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('show');
-}
-
-async function saveCategory() {
-    const id = document.getElementById('categoryId').value;
-    const name = document.getElementById('categoryName').value.trim();
-    const icon = document.getElementById('categoryIcon').value.trim();
-    const order = parseInt(document.getElementById('categoryOrder').value) || 0;
-    const is_active = document.getElementById('categoryActive').checked;
-
-    if (!name) {
-        alert('لطفاً نام دسته‌بندی را وارد کنید');
-        return;
-    }
-
-    try {
-        const url = id ? `${API_URL}/api/categories/${id}` : `${API_URL}/api/categories`;
-        const method = id ? 'PUT' : 'POST';
-
-        const response = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ name, icon, order, is_active, slug: name.replace(/\s/g, '-').toLowerCase() })
-        });
-
-        if (!response.ok) throw new Error('Failed to save category');
-
-        closeModal('categoryModal');
-        loadCategories();
-        loadStats();
-
-    } catch (error) {
-        console.error('Error saving category:', error);
-        alert('خطا در ذخیره دسته‌بندی');
-    }
-}
-
-async function editCategory(id) {
-    const category = categoriesData.find(c => c.id === id);
-    if (category) showCategoryModal(category);
-}
-
-async function deleteCategory(id) {
-    if (!confirm('آیا از حذف این دسته‌بندی مطمئن هستید؟')) return;
-
-    try {
-        const response = await fetch(`${API_URL}/api/categories/${id}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-
-        if (!response.ok) throw new Error('Failed to delete category');
-
-        loadCategories();
-        loadStats();
-
-    } catch (error) {
-        console.error('Error deleting category:', error);
-        alert('خطا در حذف دسته‌بندی');
-    }
-}
-
-// ===== مدیریت Subcategories =====
-let subcategoriesData = [];
-
-async function loadSubcategories() {
-    try {
-        const response = await fetch(`${API_URL}/api/subcategories`);
-        if (!response.ok) throw new Error('Failed to load subcategories');
-        subcategoriesData = await response.json();
-        renderSubcategories();
-    } catch (error) {
-        console.error('Error loading subcategories:', error);
-    }
-}
-
-function renderSubcategories() {
-    const tbody = document.querySelector('#subcategoriesTable tbody');
-    if (!tbody) return;
-
-    if (!subcategoriesData || subcategoriesData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94A3B8;">هیچ زیردسته‌ای وجود ندارد</td></tr>`;
-        return;
-    }
-
-    let html = '';
-    subcategoriesData.forEach(sub => {
-        const status = sub.is_active ? '<span class="status-badge active">فعال</span>' : '<span class="status-badge inactive">غیرفعال</span>';
-        html += `
-            <tr>
-                <td>${sub.icon || '📁'}</td>
-                <td>${sub.name}</td>
-                <td>${sub.categories?.name || '-'}</td>
-                <td>${status}</td>
-                <td>
-                    <div class="actions">
-                        <button class="btn-edit" onclick="editSubcategory('${sub.id}')">ویرایش</button>
-                        <button class="btn-delete" onclick="deleteSubcategory('${sub.id}')">حذف</button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    });
-    tbody.innerHTML = html;
-}
-
-function showSubcategoryModal(subcategory = null) {
-    const modal = document.getElementById('subcategoryModal');
-    if (!modal) return;
-
-    const title = document.getElementById('subcategoryModalTitle');
-    const id = document.getElementById('subcategoryId');
-    const name = document.getElementById('subcategoryName');
-    const icon = document.getElementById('subcategoryIcon');
-    const categoryId = document.getElementById('subcategoryCategoryId');
-    const order = document.getElementById('subcategoryOrder');
-    const active = document.getElementById('subcategoryActive');
-
-    categoryId.innerHTML = '<option value="">انتخاب دسته‌بندی</option>';
-    categoriesData.forEach(cat => {
-        categoryId.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
-    });
-
-    if (subcategory) {
-        title.textContent = 'ویرایش زیردسته';
-        id.value = subcategory.id;
-        name.value = subcategory.name;
-        icon.value = subcategory.icon || '';
-        categoryId.value = subcategory.category_id || '';
-        order.value = subcategory.order || 0;
-        active.checked = subcategory.is_active;
-    } else {
-        title.textContent = 'افزودن زیردسته جدید';
-        id.value = '';
-        name.value = '';
-        icon.value = '';
-        categoryId.value = '';
-        order.value = 0;
-        active.checked = true;
-    }
-
-    modal.classList.add('show');
-}
-
-async function saveSubcategory() {
-    const id = document.getElementById('subcategoryId').value;
-    const name = document.getElementById('subcategoryName').value.trim();
-    const icon = document.getElementById('subcategoryIcon').value.trim();
-    const category_id = document.getElementById('subcategoryCategoryId').value;
-    const order = parseInt(document.getElementById('subcategoryOrder').value) || 0;
-    const is_active = document.getElementById('subcategoryActive').checked;
-
-    if (!name || !category_id) {
-        alert('لطفاً همه فیلدهای ضروری را پر کنید');
-        return;
-    }
-
-    try {
-        const url = id ? `${API_URL}/api/subcategories/${id}` : `${API_URL}/api/subcategories`;
-        const method = id ? 'PUT' : 'POST';
-
-        const response = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ category_id, name, icon, order, is_active, slug: name.replace(/\s/g, '-').toLowerCase() })
-        });
-
-        if (!response.ok) throw new Error('Failed to save subcategory');
-
-        closeModal('subcategoryModal');
-        loadSubcategories();
-        loadStats();
-
-    } catch (error) {
-        console.error('Error saving subcategory:', error);
-        alert('خطا در ذخیره زیردسته');
-    }
-}
-
-async function editSubcategory(id) {
-    const sub = subcategoriesData.find(s => s.id === id);
-    if (sub) showSubcategoryModal(sub);
-}
-
-async function deleteSubcategory(id) {
-    if (!confirm('آیا از حذف این زیردسته مطمئن هستید؟')) return;
-
-    try {
-        const response = await fetch(`${API_URL}/api/subcategories/${id}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-
-        if (!response.ok) throw new Error('Failed to delete subcategory');
-
-        loadSubcategories();
-        loadStats();
-
-    } catch (error) {
-        console.error('Error deleting subcategory:', error);
-        alert('خطا در حذف زیردسته');
-    }
-}
-
-// ============================================
-// ===== مدیریت Services =====
-// ============================================
-let servicesData = [];
-
-async function loadServices() {
-    try {
-        const response = await fetch(`${API_URL}/api/services`);
-        if (!response.ok) throw new Error('Failed to load services');
-        servicesData = await response.json();
-        renderServices();
-    } catch (error) {
-        console.error('Error loading services:', error);
-    }
-}
-
-function renderServices() {
-    const tbody = document.querySelector('#servicesTable tbody');
-    if (!tbody) return;
-
-    if (!servicesData || servicesData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#94A3B8;">هیچ سرویسی وجود ندارد</td></tr>`;
-        return;
-    }
-
-    let html = '';
-    servicesData.forEach(service => {
-        const status = service.is_active ? '<span class="status-badge active">فعال</span>' : '<span class="status-badge inactive">غیرفعال</span>';
-        html += `
-            <tr>
-                <td>${service.icon || '📱'}</td>
-                <td>${service.name}</td>
-                <td>${service.price || 0} AFN</td>
-                <td>${service.discount || 0}%</td>
-                <td>${status}</td>
-                <td>
-                    <div class="actions">
-                        <button class="btn-edit" onclick="editService('${service.id}')">ویرایش</button>
-                        <button class="btn-delete" onclick="deleteService('${service.id}')">حذف</button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    });
-    tbody.innerHTML = html;
-}
-
-function showServiceModal(service = null) {
-    const modal = document.getElementById('serviceModal');
-    if (!modal) return;
-
-    const title = document.getElementById('serviceModalTitle');
-    const id = document.getElementById('serviceId');
-    const name = document.getElementById('serviceName');
-    const price = document.getElementById('servicePrice');
-    const discount = document.getElementById('serviceDiscount');
-    const description = document.getElementById('serviceDescription');
-    const subcategoryId = document.getElementById('serviceSubcategoryId');
-    const active = document.getElementById('serviceActive');
-
-    // پر کردن dropdown زیردسته‌ها
-    subcategoryId.innerHTML = '<option value="">انتخاب زیردسته</option>';
-    subcategoriesData.forEach(sub => {
-        subcategoryId.innerHTML += `<option value="${sub.id}">${sub.name}</option>`;
-    });
-
-    if (service) {
-        title.textContent = 'ویرایش سرویس';
-        id.value = service.id;
-        name.value = service.name;
-        price.value = service.price || '';
-        discount.value = service.discount || 0;
-        description.value = service.description || '';
-        subcategoryId.value = service.subcategory_id || '';
-        active.checked = service.is_active;
-    } else {
-        title.textContent = 'افزودن سرویس جدید';
-        id.value = '';
-        name.value = '';
-        price.value = '';
-        discount.value = 0;
-        description.value = '';
-        subcategoryId.value = '';
-        active.checked = true;
-    }
-
-    modal.classList.add('show');
-}
-
-async function saveService() {
-    const id = document.getElementById('serviceId').value;
-    const name = document.getElementById('serviceName').value.trim();
-    const price = parseFloat(document.getElementById('servicePrice').value) || 0;
-    const discount = parseFloat(document.getElementById('serviceDiscount').value) || 0;
-    const description = document.getElementById('serviceDescription').value.trim();
-    const subcategory_id = document.getElementById('serviceSubcategoryId').value;
-    const is_active = document.getElementById('serviceActive').checked;
-
-    if (!name || !subcategory_id) {
-        alert('لطفاً همه فیلدهای ضروری را پر کنید');
-        return;
-    }
-
-    try {
-        const url = id ? `${API_URL}/api/services/${id}` : `${API_URL}/api/services`;
-        const method = id ? 'PUT' : 'POST';
-
-        const response = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-                subcategory_id,
-                name,
-                price,
-                discount,
-                description,
-                is_active,
-                slug: name.replace(/\s/g, '-').toLowerCase()
-            })
-        });
-
-        if (!response.ok) throw new Error('Failed to save service');
-
-        closeModal('serviceModal');
-        loadServices();
-        loadStats();
-
-    } catch (error) {
-        console.error('Error saving service:', error);
-        alert('خطا در ذخیره سرویس');
-    }
-}
-
-async function editService(id) {
-    const service = servicesData.find(s => s.id === id);
-    if (service) showServiceModal(service);
-}
-
-async function deleteService(id) {
-    if (!confirm('آیا از حذف این سرویس مطمئن هستید؟')) return;
-
-    try {
-        const response = await fetch(`${API_URL}/api/services/${id}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-
-        if (!response.ok) throw new Error('Failed to delete service');
-
-        loadServices();
-        loadStats();
-
-    } catch (error) {
-        console.error('Error deleting service:', error);
-        alert('خطا در حذف سرویس');
-    }
-}
-
-// ============================================
-// ===== مدیریت Reviews =====
-// ============================================
-let reviewsData = [];
-
-async function loadReviews() {
-    try {
-        const response = await fetch(`${API_URL}/api/reviews`);
-        if (!response.ok) throw new Error('Failed to load reviews');
-        reviewsData = await response.json();
-        renderReviews();
-    } catch (error) {
-        console.error('Error loading reviews:', error);
-    }
-}
-
-function renderReviews() {
-    const tbody = document.querySelector('#reviewsTable tbody');
-    if (!tbody) return;
-
-    if (!reviewsData || reviewsData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94A3B8;">هیچ نظری وجود ندارد</td></tr>`;
-        return;
-    }
-
-    let html = '';
-    reviewsData.forEach(review => {
-        const stars = '⭐'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
-        html += `
-            <tr>
-                <td>${review.customer_name}</td>
-                <td>${stars}</td>
-                <td>${review.comment.substring(0, 30)}...</td>
-                <td>${review.is_approved ? '✅ تأیید شده' : '⏳ در انتظار'}</td>
-                <td>
-                    <div class="actions">
-                        ${!review.is_approved ? `<button class="btn-approve" onclick="approveReview('${review.id}')">تأیید</button>` : ''}
-                        <button class="btn-delete" onclick="deleteReview('${review.id}')">حذف</button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    });
-    tbody.innerHTML = html;
-}
-
-async function approveReview(id) {
-    try {
-        const response = await fetch(`${API_URL}/api/reviews/${id}/approve`, {
-            method: 'PUT',
-            credentials: 'include'
-        });
-
-        if (!response.ok) throw new Error('Failed to approve review');
-
-        loadReviews();
-        loadStats();
-
-    } catch (error) {
-        console.error('Error approving review:', error);
-        alert('خطا در تأیید نظر');
-    }
-}
-
-async function deleteReview(id) {
-    if (!confirm('آیا از حذف این نظر مطمئن هستید؟')) return;
-
-    try {
-        const response = await fetch(`${API_URL}/api/reviews/${id}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-
-        if (!response.ok) throw new Error('Failed to delete review');
-
-        loadReviews();
-        loadStats();
-
-    } catch (error) {
-        console.error('Error deleting review:', error);
-        alert('خطا در حذف نظر');
-    }
-}
-
-// ============================================
-// ===== مدیریت Posts =====
-// ============================================
-let postsData = [];
-
-async function loadPosts() {
-    try {
-        const response = await fetch(`${API_URL}/api/posts`);
-        if (!response.ok) throw new Error('Failed to load posts');
-        postsData = await response.json();
-        renderPosts();
-    } catch (error) {
-        console.error('Error loading posts:', error);
-    }
-}
-
-function renderPosts() {
-    const tbody = document.querySelector('#postsTable tbody');
-    if (!tbody) return;
-
-    if (!postsData || postsData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94A3B8;">هیچ مطلبی وجود ندارد</td></tr>`;
-        return;
-    }
-
-    let html = '';
-    postsData.forEach(post => {
-        const status = post.is_active ? '<span class="status-badge active">فعال</span>' : '<span class="status-badge inactive">غیرفعال</span>';
-        html += `
-            <tr>
-                <td>${post.title}</td>
-                <td>${post.content.substring(0, 30)}...</td>
-                <td>❤️ ${post.likes || 0}</td>
-                <td>${status}</td>
-                <td>
-                    <div class="actions">
-                        <button class="btn-edit" onclick="editPost('${post.id}')">ویرایش</button>
-                        <button class="btn-delete" onclick="deletePost('${post.id}')">حذف</button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    });
-    tbody.innerHTML = html;
-}
-
-function showPostModal(post = null) {
-    const modal = document.getElementById('postModal');
-    if (!modal) return;
-
-    const title = document.getElementById('postModalTitle');
-    const id = document.getElementById('postId');
-    const name = document.getElementById('postTitle');
-    const content = document.getElementById('postContent');
-    const active = document.getElementById('postActive');
-
-    if (post) {
-        title.textContent = 'ویرایش مطلب';
-        id.value = post.id;
-        name.value = post.title;
-        content.value = post.content;
-        active.checked = post.is_active;
-    } else {
-        title.textContent = 'افزودن مطلب جدید';
-        id.value = '';
-        name.value = '';
-        content.value = '';
-        active.checked = true;
-    }
-
-    modal.classList.add('show');
-}
-
-async function savePost() {
-    const id = document.getElementById('postId').value;
-    const title = document.getElementById('postTitle').value.trim();
-    const content = document.getElementById('postContent').value.trim();
-    const is_active = document.getElementById('postActive').checked;
-
-    if (!title || !content) {
-        alert('لطفاً عنوان و متن را وارد کنید');
-        return;
-    }
-
-    try {
-        const url = id ? `${API_URL}/api/posts/${id}` : `${API_URL}/api/posts`;
-        const method = id ? 'PUT' : 'POST';
-
-        const response = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ title, content, is_active })
-        });
-
-        if (!response.ok) throw new Error('Failed to save post');
-
-        closeModal('postModal');
-        loadPosts();
-        loadStats();
-
-    } catch (error) {
-        console.error('Error saving post:', error);
-        alert('خطا در ذخیره مطلب');
-    }
-}
-
-async function editPost(id) {
-    const post = postsData.find(p => p.id === id);
-    if (post) showPostModal(post);
-}
-
-async function deletePost(id) {
-    if (!confirm('آیا از حذف این مطلب مطمئن هستید؟')) return;
-
-    try {
-        const response = await fetch(`${API_URL}/api/posts/${id}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-
-        if (!response.ok) throw new Error('Failed to delete post');
-
-        loadPosts();
-        loadStats();
-
-    } catch (error) {
-        console.error('Error deleting post:', error);
-        alert('خطا در حذف مطلب');
-    }
-}
-
-// ============================================
-// ===== مدیریت Settings =====
-// ============================================
-let settingsData = {};
-
-async function loadSettings() {
-    try {
-        const response = await fetch(`${API_URL}/api/settings`);
-        if (!response.ok) throw new Error('Failed to load settings');
-        settingsData = await response.json();
-        renderSettings();
-    } catch (error) {
-        console.error('Error loading settings:', error);
-    }
-}
-
-function renderSettings() {
-    const form = document.getElementById('settingsForm');
-    if (!form) return;
-
-    // پر کردن فیلدها با مقادیر موجود
-    document.getElementById('settingSiteName').value = settingsData.site_name || '';
-    document.getElementById('settingWhatsapp').value = settingsData.whatsapp_number || '';
-    document.getElementById('settingTelegram').value = settingsData.telegram_link || '';
-    document.getElementById('settingFacebook').value = settingsData.facebook_link || '';
-    document.getElementById('settingInstagram').value = settingsData.instagram_link || '';
-    document.getElementById('settingFooter').value = settingsData.footer_text || '';
-    document.getElementById('settingAnnouncement').value = settingsData.announcement || '';
-}
-
-async function saveSettings() {
-    const updates = {
-        site_name: document.getElementById('settingSiteName').value.trim(),
-        whatsapp_number: document.getElementById('settingWhatsapp').value.trim(),
-        telegram_link: document.getElementById('settingTelegram').value.trim(),
-        facebook_link: document.getElementById('settingFacebook').value.trim(),
-        instagram_link: document.getElementById('settingInstagram').value.trim(),
-        footer_text: document.getElementById('settingFooter').value.trim(),
-        announcement: document.getElementById('settingAnnouncement').value.trim()
-    };
-
-    try {
-        const response = await fetch(`${API_URL}/api/settings`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(updates)
-        });
-
-        if (!response.ok) throw new Error('Failed to save settings');
-
-        alert('تنظیمات با موفقیت ذخیره شد!');
-        loadSettings();
-
-    } catch (error) {
-        console.error('Error saving settings:', error);
-        alert('خطا در ذخیره تنظیمات');
+    .admin-section .section-header {
+        flex-direction: column;
+        align-items: stretch;
     }
 }
