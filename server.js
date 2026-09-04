@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
-import bcrypt from 'bcryptjs';
 import cookieParser from 'cookie-parser';
 import crypto from 'crypto';
 
@@ -60,7 +59,7 @@ const requireAuth = async (req, res, next) => {
     }
 };
 
-// ===== Admin Login =====
+// ===== Admin Login (بدون هش) =====
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -75,8 +74,7 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const isValid = await bcrypt.compare(password, adminData.password_hash);
-        if (!isValid) {
+        if (adminData.password !== password) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
