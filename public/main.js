@@ -1,17 +1,17 @@
 // ============================================
-// OMH Social Services - Main JavaScript (نسخه جدید)
+// OMH Social Services - Main JavaScript
 // ============================================
 
 const API_URL = window.location.origin;
 let WHATSAPP_NUMBER = '9370000000';
 
-// ===== داده‌های کلی =====
+// ===== داده‌ها =====
 let allCategories = [];
 let allSubcategories = [];
 let allServices = [];
 
-let currentCategoryId = 'all';
-let currentSubcategoryId = 'all';
+let currentCategoryId = null;
+let currentSubcategoryId = null;
 
 // ============================================
 // بارگذاری اولیه
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (query.length >= 2) {
                 searchServices(query);
             } else if (query.length === 0) {
-                loadAllData();
+                resetToCategories();
             }
         });
     }
@@ -77,7 +77,6 @@ async function loadAllData() {
             loadServices()
         ]);
         renderCategories();
-        renderServicesByCategory('all');
     } catch (error) {
         console.error('Error loading data:', error);
     }
@@ -129,7 +128,7 @@ async function loadServices() {
 }
 
 // ============================================
-// رندر دسته‌بندی‌ها
+// مرحله ۱: رندر Categoryها
 // ============================================
 function renderCategories() {
     const container = document.getElementById('categoryTabs');
@@ -144,7 +143,7 @@ function renderCategories() {
 
     container.innerHTML = html;
 
-    // رویداد کلیک روی دسته‌بندی‌ها
+    // رویداد کلیک روی Categoryها
     container.querySelectorAll('.cat-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             container.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
@@ -152,27 +151,39 @@ function renderCategories() {
 
             const categoryId = btn.dataset.category;
             currentCategoryId = categoryId;
-            currentSubcategoryId = 'all';
 
-            renderSubcategories(categoryId);
-            renderServicesByCategory(categoryId);
+            if (categoryId === 'all') {
+                // نمایش همه سرویس‌ها
+                currentSubcategoryId = null;
+                renderSubcategories(null);
+                renderServices(allServices);
+            } else {
+                // نمایش زیردسته‌های آن Category
+                renderSubcategories(categoryId);
+                // سرویس‌ها را خالی کن تا زیردسته انتخاب شود
+                document.getElementById('servicesGrid').innerHTML = 
+                    `<div class="empty-message">لطفاً یک زیردسته را انتخاب کنید</div>`;
+            }
         });
     });
 
-    // بارگذاری زیردسته‌ها برای "همه"
-    renderSubcategories('all');
+    // بارگذاری پیش‌فرض: همه سرویس‌ها
+    currentCategoryId = 'all';
+    currentSubcategoryId = null;
+    renderSubcategories(null);
+    renderServices(allServices);
 }
 
 // ============================================
-// رندر زیردسته‌ها
+// مرحله ۲: رندر Subcategoryها
 // ============================================
 function renderSubcategories(categoryId) {
     const container = document.getElementById('subcategoryTabs');
     if (!container) return;
 
-    // فیلتر زیردسته‌ها بر اساس دسته‌بندی
+    // اگر categoryId = null باشد، همه زیردسته‌ها را نشان بده
     let filtered = [];
-    if (categoryId === 'all') {
+    if (!categoryId || categoryId === 'all') {
         filtered = allSubcategories;
     } else {
         filtered = allSubcategories.filter(sub => sub.category_id === categoryId);
@@ -192,7 +203,7 @@ function renderSubcategories(categoryId) {
 
     container.innerHTML = html;
 
-    // رویداد کلیک روی زیردسته‌ها
+    // رویداد کلیک روی Subcategoryها
     container.querySelectorAll('.sub-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             container.querySelectorAll('.sub-btn').forEach(b => b.classList.remove('active'));
@@ -201,55 +212,30 @@ function renderSubcategories(categoryId) {
             const subcategoryId = btn.dataset.subcategory;
             currentSubcategoryId = subcategoryId;
 
-            renderServicesByCategoryAndSubcategory(currentCategoryId, subcategoryId);
+            if (subcategoryId === 'all') {
+                // نمایش همه سرویس‌های آن Category
+                const categoryId = currentCategoryId;
+                if (categoryId === 'all') {
+                    renderServices(allServices);
+                } else {
+                    const filteredServices = allServices.filter(s => 
+                        s.subcategories?.categories?.id === categoryId
+                    );
+                    renderServices(filteredServices);
+                }
+            } else {
+                // نمایش سرویس‌های آن Subcategory
+                const filteredServices = allServices.filter(s => 
+                    s.subcategory_id === subcategoryId
+                );
+                renderServices(filteredServices);
+            }
         });
     });
 }
 
 // ============================================
-// رندر سرویس‌ها بر اساس دسته‌بندی
-// ============================================
-function renderServicesByCategory(categoryId) {
-    let filtered = [];
-
-    if (categoryId === 'all') {
-        filtered = allServices;
-    } else {
-        filtered = allServices.filter(service => {
-            return service.subcategories?.categories?.id === categoryId;
-        });
-    }
-
-    renderServices(filtered);
-}
-
-// ============================================
-// رندر سرویس‌ها بر اساس دسته‌بندی + زیردسته
-// ============================================
-function renderServicesByCategoryAndSubcategory(categoryId, subcategoryId) {
-    let filtered = [];
-
-    // فیلتر بر اساس دسته‌بندی
-    if (categoryId === 'all') {
-        filtered = allServices;
-    } else {
-        filtered = allServices.filter(service => {
-            return service.subcategories?.categories?.id === categoryId;
-        });
-    }
-
-    // فیلتر بر اساس زیردسته
-    if (subcategoryId !== 'all') {
-        filtered = filtered.filter(service => {
-            return service.subcategory_id === subcategoryId;
-        });
-    }
-
-    renderServices(filtered);
-}
-
-// ============================================
-// رندر سرویس‌ها
+// مرحله ۳: رندر Services (سرویس‌ها)
 // ============================================
 function renderServices(services) {
     const grid = document.getElementById('servicesGrid');
@@ -274,7 +260,7 @@ function renderServices(services) {
             <div class="service-card" data-id="${service.id}">
                 <div class="icon-wrap">${icon}</div>
                 <h4>${service.name}</h4>
-                ${subcategoryName ? `<div style="font-size:13px;color:var(--gray-400);margin-bottom:6px;">${categoryName} / ${subcategoryName}</div>` : ''}
+                ${categoryName ? `<div style="font-size:13px;color:var(--gray-400);margin-bottom:6px;">${categoryName} / ${subcategoryName}</div>` : ''}
                 <p class="desc">${service.short_description || service.description || ''}</p>
                 <div class="price">
                     ${finalPrice.toFixed(0)} AFN
@@ -306,6 +292,13 @@ async function searchServices(query) {
     } catch (error) {
         console.error('Error searching:', error);
     }
+}
+
+// ============================================
+// بازگشت به حالت اولیه (نمایش Categoryها)
+// ============================================
+function resetToCategories() {
+    renderCategories();
 }
 
 // ============================================
