@@ -16,17 +16,14 @@
                 <span>OMH</span>
             </div>
             <h2>پنل مدیریت</h2>
-            <p>لطفاً برای ورود اطلاعات خود را وارد کنید</p>
+            <p>لطفاً رمز عبور را وارد کنید</p>
 
             <form id="loginForm">
-                <div class="form-group">
-                    <label><i class="fas fa-user"></i> نام کاربری</label>
-                    <input type="text" id="username" placeholder="نام کاربری را وارد کنید" required />
-                </div>
+                <input type="hidden" id="username" value="OMH" />
 
                 <div class="form-group">
                     <label><i class="fas fa-lock"></i> رمز عبور</label>
-                    <input type="password" id="password" placeholder="رمز عبور را وارد کنید" required />
+                    <input type="password" id="password" placeholder="رمز عبور را وارد کنید" required autofocus />
                 </div>
 
                 <button type="submit" class="btn-login">
