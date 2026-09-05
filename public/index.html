@@ -27,11 +27,17 @@
                 <a href="#contact">تماس با ما</a>
             </nav>
 
-            <div class="hamburger" id="hamburger">
-                <i class="fas fa-bars"></i>
+            <div class="header-actions">
+                <button class="theme-toggle" id="themeToggle" type="button" aria-label="تغییر حالت روشن و تاریک" title="حالت روشن/تاریک">
+                    <i class="fas fa-moon"></i><span class="theme-label">تاریک</span>
+                </button>
+                <div class="hamburger" id="hamburger" role="button" tabindex="0" aria-label="منو">
+                    <i class="fas fa-bars"></i>
+                </div>
             </div>
         </div>
     </header>
+    <div id="announcementList" class="announcement-list" hidden></div>
 
     <!-- ==================== صفحه اصلی ==================== -->
     <main>
@@ -146,6 +152,18 @@
                     <h2>⭐ نظرات مشتریان</h2>
                     <p>آنچه مشتریان ما می‌گویند</p>
                 </div>
+
+                <form id="reviewForm" class="review-form">
+                    <h3>نظر خود را ثبت کنید</h3>
+                    <div class="review-form-grid">
+                        <input id="reviewName" name="customer_name" type="text" maxlength="80" placeholder="نام شما" required />
+                        <select id="reviewService" name="service_id" required><option value="">انتخاب سرویس</option></select>
+                        <select id="reviewRating" name="rating" required><option value="">امتیاز</option><option value="5">★★★★★ عالی</option><option value="4">★★★★ خوب</option><option value="3">★★★ متوسط</option><option value="2">★★ ضعیف</option><option value="1">★ خیلی ضعیف</option></select>
+                    </div>
+                    <textarea id="reviewComment" name="comment" maxlength="1000" placeholder="نظر شما..." required></textarea>
+                    <button class="btn btn-primary" type="submit"><i class="fas fa-paper-plane"></i> ارسال نظر</button>
+                    <p id="reviewMessage" class="review-message" aria-live="polite"></p>
+                </form>
 
                 <div class="reviews-grid" id="reviewsGrid">
                     <!-- نظرات از طریق جاوااسکریپت بارگذاری می‌شوند -->

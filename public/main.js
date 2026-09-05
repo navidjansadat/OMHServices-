@@ -57,7 +57,8 @@ async function loadAllData() {
     const [cats, subs, services] = await Promise.all([api('/api/categories'), api('/api/subcategories'), api('/api/services')]);
     allCategories = cats; allSubcategories = subs; allServices = services;
     renderCategories(); renderSubcategories('all'); applyFilters();
-    loadPosts(); loadReviews(); loadSettings();
+    fillReviewServices();
+    loadPosts(); loadReviews(); loadSettings(); loadAnnouncementList();
 }
 
 function renderCategories() {
@@ -99,12 +100,53 @@ function orderService(id, name, price) { window.open(whatsappUrl(`سلام، م�
 async function loadPosts() { try { const posts = await api('/api/posts'); const box = $('postsGrid'); if (!box) return; box.replaceChildren(); if (!posts.length) { const p=document.createElement('p'); p.className='empty-message'; p.textContent='هنوز مطلبی منتشر نشده است.'; box.append(p); return; } posts.forEach(post => { const article=document.createElement('article'); article.className='post-card'; const h=document.createElement('h3'); h.textContent=post.title || ''; const p=document.createElement('p'); p.textContent=post.content || ''; article.append(h,p); if (post.likes !== undefined) { const b=document.createElement('button'); b.className='like-btn'; b.textContent=`❤️ ${Number(post.likes||0)}`; b.addEventListener('click',async()=>{try{const updated=await api(`/api/posts/${post.id}/like`,{method:'POST'}); b.textContent=`❤️ ${Number(updated.likes||0)}`;}catch(e){}}); article.append(b); } box.append(article); }); } catch(e) { console.warn(e); } }
 async function loadReviews() { try { const reviews = await api('/api/reviews'); const box=$('reviewsGrid'); if(!box)return; box.replaceChildren(); if(!reviews.length){const p=document.createElement('p');p.className='empty-message';p.textContent='هنوز نظری ثبت نشده است.';box.append(p);return;} reviews.forEach(r=>{const article=document.createElement('article');article.className='review-card';const h=document.createElement('h4');h.textContent=r.customer_name||'مشتری';const stars=document.createElement('div');stars.textContent='★'.repeat(Number(r.rating||0))+'☆'.repeat(5-Number(r.rating||0));const p=document.createElement('p');p.textContent=r.comment||'';article.append(h,stars,p);box.append(article);}); } catch(e){console.warn(e);} }
 
+async function loadAnnouncementList() {
+    try {
+        const rows = await api('/api/announcements');
+        const box = $('announcementList'); if (!box) return;
+        box.replaceChildren();
+        if (!rows.length) { box.hidden = true; return; }
+        rows.forEach(a => {
+            const item = document.createElement('div'); item.className = 'announcement-item';
+            const icon = document.createElement('span'); icon.className = 'announcement-icon'; icon.textContent = a.icon || '📢';
+            const wrap = document.createElement('div'); const h = document.createElement('strong'); h.textContent = a.title || 'اعلان'; const p = document.createElement('span'); p.textContent = a.content || '';
+            wrap.append(h,p); item.append(icon,wrap); box.append(item);
+        });
+        box.hidden = false;
+    } catch (e) { console.warn(e); }
+}
+function fillReviewServices() {
+    const select = $('reviewService'); if (!select) return;
+    select.replaceChildren(new Option('انتخاب سرویس',''));
+    allServices.forEach(s => select.append(new Option(s.name, s.id)));
+}
+function initTheme() {
+    const saved = localStorage.getItem('omh-theme');
+    if (saved === 'dark') document.body.classList.add('dark-mode');
+    const btn = $('themeToggle'); if (!btn) return;
+    const sync = () => { const dark = document.body.classList.contains('dark-mode'); btn.innerHTML = `<i class="fas ${dark ? 'fa-sun' : 'fa-moon'}"></i><span class="theme-label">${dark ? 'روشن' : 'تاریک'}</span>`; };
+    sync();
+    btn.addEventListener('click', () => { document.body.classList.toggle('dark-mode'); localStorage.setItem('omh-theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light'); sync(); });
+}
+async function submitReview(e) {
+    e.preventDefault(); const form=e.currentTarget, msg=$('reviewMessage'), btn=form.querySelector('button[type="submit"]');
+    msg.textContent=''; msg.className='review-message'; btn.disabled=true;
+    try {
+        const body={customer_name:$('reviewName').value.trim(),service_id:$('reviewService').value,rating:Number($('reviewRating').value),comment:$('reviewComment').value.trim()};
+        const out=await api('/api/reviews',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        msg.textContent=out.message || 'نظر شما برای تأیید ارسال شد.'; msg.classList.add('success'); form.reset();
+    } catch(e) { msg.textContent=e.message; msg.classList.add('error'); } finally { btn.disabled=false; }
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
-    $('hamburger')?.addEventListener('click', () => $('navMenu')?.classList.toggle('active'));
-    document.querySelectorAll('#navMenu a').forEach(a => a.addEventListener('click',()=> $('navMenu')?.classList.remove('active')));
+    $('hamburger')?.addEventListener('click', () => $('navMenu')?.classList.toggle('open'));
+    $('hamburger')?.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('navMenu')?.classList.toggle('open'); } });
+    document.querySelectorAll('#navMenu a').forEach(a => a.addEventListener('click',()=> $('navMenu')?.classList.remove('open')));
     $('searchInput')?.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer=setTimeout(applyFilters,150); });
     $('floatingWhatsapp')?.addEventListener('click', e=>{e.preventDefault();openWhatsApp();});
     $('whatsappLink')?.addEventListener('click',e=>{e.preventDefault();openWhatsApp();});
     $('footerWhatsapp')?.addEventListener('click',e=>{e.preventDefault();openWhatsApp();});
+    initTheme();
+    $('reviewForm')?.addEventListener('submit', submitReview);
     try { await loadAllData(); } catch(e) { const grid=$('servicesGrid'); if(grid) grid.textContent='ارتباط با سرور برقرار نشد. لطفاً دوباره تلاش کنید.'; console.error(e); }
 });
