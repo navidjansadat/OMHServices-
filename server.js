@@ -28,7 +28,7 @@ const supabase = createClient(
     { auth: { persistSession: false, autoRefreshToken: false } }
 );
 
-const allowedOrigins = (process.env.FRONTEND_ORIGINS || `http://localhost:${PORT},http://localhost:3000`).split(',').map(v => v.trim()).filter(Boolean);
+const allowedOrigins = (process.env.FRONTEND_ORIGINS || `http://localhost:${PORT},http://localhost:3000,https://omhservices-laig.onrender.com`).split(',').map(v => v.trim()).filter(Boolean);
 const publicSettings = new Set(['site_name', 'whatsapp', 'telegram', 'facebook', 'instagram', 'footer_text', 'announcement', 'logo_url', 'favicon_url']);
 const settingValidators = {
     site_name: v => stringValue(v, 100), whatsapp: v => stringValue(v, 30), telegram: v => urlValue(v),
@@ -106,12 +106,22 @@ async function storageRemoveByUrl(url) {
         await supabase.storage.from(bucket).remove([objectPath]);
     } catch (e) { console.warn('Storage cleanup failed:', e.message); }
 }
+let storageReady = new Set();
+async function ensureStorageBucket(bucket) {
+    if (storageReady.has(bucket)) return true;
+    const { data: existing, error: listError } = await supabase.storage.listBuckets();
+    if (!listError && existing?.some(b => b.name === bucket)) { storageReady.add(bucket); return true; }
+    const { error } = await supabase.storage.createBucket(bucket, { public: true, fileSizeLimit: '5MB', allowedMimeTypes: ['image/jpeg','image/png','image/webp','image/gif','image/svg+xml'] });
+    if (error && !/already exists|duplicate/i.test(error.message || '')) throw error;
+    storageReady.add(bucket); return true;
+}
 async function uploadImage(req, res) {
     if (!req.file) return fail(res, 400, 'فایل تصویر ارسال نشده است.');
     const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'omh-assets';
     const extMap = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/svg+xml': 'svg' };
     const ext = extMap[req.file.mimetype];
     if (!ext) return fail(res, 400, 'فرمت تصویر مجاز نیست.');
+    try { await ensureStorageBucket(bucket); } catch (e) { console.error('Storage bucket setup failed:', e); return fail(res, 500, 'Storage Bucket ساخته نشد. SUPABASE_SERVICE_ROLE_KEY را در Render بررسی کنید.'); }
     const folder = stringValue(req.body.folder, 40) || 'uploads';
     const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, '') || 'uploads';
     const objectPath = `${safeFolder}/${uuidv4()}.${ext}`;
