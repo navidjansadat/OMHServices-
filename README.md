@@ -1,33 +1,65 @@
-# OMH Social Services — Rebuilt
+# OMH Social Services — Final
 
-نسخه بازسازی‌شده پروژه OMH با تمرکز روی امنیت، پنل مدیریت، فیلتر سرویس‌ها و آپلود تصاویر.
+نسخه نهایی بازسازی و یکپارچه‌شده OMH Social Services با تمرکز روی پایداری، امنیت، تجربه موبایل و مدیریت کامل محتوا.
 
-## قابلیت‌های اصلی
-- احراز هویت ادمین با session cookie و bcrypt؛ رمزهای قدیمی plain-text در اولین ورود موفق به bcrypt تبدیل می‌شوند.
-- محافظت تمام APIهای مدیریتی با middleware احراز هویت.
-- rate limit برای ورود و عملیات نوشتن.
-- مدیریت کامل دسته‌بندی، زیردسته، سرویس، نظرات، نشرات و اعلان‌ها.
-- فیلتر صحیح Category → Subcategory → Service و جستجوی ترکیبی.
-- حذف/ویرایش امن‌تر و جلوگیری از حذف دسته‌ای که وابستگی فعال دارد.
-- جلوگیری از XSS در رندر عمومی محتوا با textContent/escaping.
-- آپلود لوگوی سایت و تصویر سرویس در Supabase Storage با preview و حذف/تعویض.
-- تنظیمات عمومی با allowlist و URL validation.
-- هدرهای پایه امنیتی و عدم نمایش جزئیات خطای دیتابیس به کاربر.
+## ساختار دیتابیس مورد استفاده
+- `admins`
+- `categories`
+- `subcategories`
+- `services`
+- `reviews`
+- `posts`
+- `announcements`
+- `settings`
 
-## راه‌اندازی
-1. `npm install`
-2. متغیرهای `env.example.txt` را در `.env` تنظیم کنید.
-3. حتماً `SUPABASE_SERVICE_ROLE_KEY` را فقط روی سرور قرار دهید و هرگز داخل frontend نگذارید.
-4. در Supabase یک Storage Bucket با نام `omh-assets` (یا مقدار `SUPABASE_STORAGE_BUCKET`) بسازید و برای فایل‌های public، دسترسی خواندن عمومی را تنظیم کنید. آپلود/حذف فقط از طریق backend انجام می‌شود.
-5. `FRONTEND_ORIGINS` را با دامنه واقعی سایت تنظیم کنید.
-6. `npm start`
+## قابلیت‌ها
+### سایت عمومی
+- هدر ریسپانسیو و منوی واقعی موبایل
+- Dark / Light Mode با ذخیره انتخاب کاربر
+- لوگوی پیش‌فرض داخلی + امکان تعویض لوگو از پنل
+- دسته‌بندی → زیردسته → سرویس
+- جستجوی ترکیبی خدمات
+- قیمت، تخفیف، واحد، زمان تحویل، گارانتی، تصویر و سرویس ویژه
+- سفارش سرویس از طریق WhatsApp
+- ثبت نظر مشتری با انتخاب سرویس و امتیاز؛ نظرها قبل از انتشار تأیید می‌شوند
+- نشرات و Like
+- اعلان‌های فعال در بالای سایت
+- شبکه‌های اجتماعی قابل تنظیم
+- طراحی موبایل و دسکتاپ متعادل
 
-## نکته دیتابیس
-کد بازسازی‌شده از همان جدول‌ها و ستون‌های پروژه اولیه استفاده می‌کند: `admins`, `categories`, `subcategories`, `services`, `reviews`, `announcements`, `settings`, `posts`.
-ستون‌های مورد استفاده برای سرویس‌ها شامل `image`, `icon`, `short_description`, `unit`, `delivery_time`, `guarantee`, `is_featured`, `order`, `views` است؛ تنظیمات می‌تواند `logo_url` را به‌عنوان یک key/value نگه دارد.
-اگر RLS روی جداول فعال است، backend باید با Service Role Key اجرا شود.
+### پنل مدیریت
+- ورود امن با session cookie و bcrypt
+- محافظت APIهای مدیریتی
+- rate limit برای ورود و عملیات نوشتن
+- مدیریت دسته‌بندی، زیردسته، سرویس، نظرات، نشرات و اعلان‌ها
+- آپلود و تعویض تصویر سرویس
+- آپلود و حذف لوگو
+- جستجو و فیلتر داخل پنل
+- Dark / Light Mode برای پنل
+- خطای یک بخش باعث از کار افتادن کل داشبورد نمی‌شود
 
-## مسیرهای مهم
-- `/` سایت عمومی
-- `/admin` ورود مدیریت
-- `/admin/dashboard` داشبورد
+## Render Environment Variables
+```text
+PORT=5000
+NODE_ENV=production
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
+SUPABASE_STORAGE_BUCKET=omh-assets
+FRONTEND_ORIGINS=https://YOUR_RENDER_DOMAIN.onrender.com
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` را فقط در Render قرار دهید و هرگز در frontend یا GitHub منتشر نکنید.
+
+## Storage
+سرور هنگام اولین آپلود تلاش می‌کند Bucket با نام `omh-assets` را در صورت نبودن ایجاد کند. اگر پروژه Supabase اجازه ساخت Bucket از API را ندهد، از Supabase → Storage یک Bucket عمومی با همین نام بسازید.
+
+## اجرا
+```bash
+npm install
+npm start
+```
+
+سایت:
+- `/`
+- `/admin`
+- `/admin/dashboard`
