@@ -13,10 +13,13 @@
     <!-- ==================== هدر ==================== -->
     <header id="header">
         <div class="container header-container">
+            <button class="hamburger" id="hamburger" type="button" aria-label="باز کردن منو" aria-expanded="false">
+                <i class="fas fa-bars"></i>
+            </button>
+
             <div class="logo">
-                <img data-site-logo hidden class="site-logo-img" alt="OMH logo" />
-                <i data-logo-fallback class="fas fa-bolt" style="color: #10B981; font-size: 24px;"></i>
-                <span data-site-name>OMH Social Services</span>
+                <span class="logo-mark"><img data-site-logo hidden class="site-logo-img" alt="OMH logo" /><i data-logo-fallback class="fas fa-bolt"></i></span>
+                <span class="logo-text" data-site-name>OMH Social Services</span>
             </div>
 
             <nav class="nav-menu" id="navMenu">
@@ -28,12 +31,9 @@
             </nav>
 
             <div class="header-actions">
-                <button class="theme-toggle" id="themeToggle" type="button" aria-label="تغییر حالت روشن و تاریک" title="حالت روشن/تاریک">
+                <button class="theme-toggle" id="themeToggle" type="button" aria-label="تغییر حالت روشن و تاریک" title="حالت روشن و تاریک">
                     <i class="fas fa-moon"></i><span class="theme-label">تاریک</span>
                 </button>
-                <div class="hamburger" id="hamburger" role="button" tabindex="0" aria-label="منو">
-                    <i class="fas fa-bars"></i>
-                </div>
             </div>
         </div>
     </header>
@@ -63,7 +63,15 @@
                     </div>
                 </div>
                 <div class="hero-image">
-                    <i class="fas fa-rocket" style="font-size: 120px; color: #10B981;"></i>
+                    <div class="hero-card">
+                        <div class="hero-icon"><i class="fas fa-bolt"></i></div>
+                        <div class="hero-card-title">OMH Social Services</div>
+                        <div class="hero-card-subtitle">سریع • مطمئن • حرفه‌ای</div>
+                        <div class="hero-mini-stats">
+                            <span><i class="fas fa-check-circle"></i> خدمات متنوع</span>
+                            <span><i class="fas fa-headset"></i> پشتیبانی</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>

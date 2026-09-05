@@ -26,7 +26,7 @@ function serviceImage(service) {
 
 function applyLogo(url) {
     document.querySelectorAll('[data-site-logo]').forEach(img => {
-        if (url) { img.src = url; img.hidden = false; }
+        if (url) { img.src = url; img.hidden = false; img.onerror = () => { img.hidden = true; }; }
         else { img.removeAttribute('src'); img.hidden = true; }
     });
     document.querySelectorAll('[data-logo-fallback]').forEach(el => el.hidden = !!url);
@@ -139,9 +139,8 @@ async function submitReview(e) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-    $('hamburger')?.addEventListener('click', () => $('navMenu')?.classList.toggle('open'));
-    $('hamburger')?.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('navMenu')?.classList.toggle('open'); } });
-    document.querySelectorAll('#navMenu a').forEach(a => a.addEventListener('click',()=> $('navMenu')?.classList.remove('open')));
+    $('hamburger')?.addEventListener('click', () => { const nav = $('navMenu'); if (!nav) return; const open = nav.classList.toggle('open'); $('hamburger').setAttribute('aria-expanded', String(open)); });
+    document.querySelectorAll('#navMenu a').forEach(a => a.addEventListener('click',()=> { $('navMenu')?.classList.remove('open'); $('hamburger')?.setAttribute('aria-expanded','false'); }));
     $('searchInput')?.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer=setTimeout(applyFilters,150); });
     $('floatingWhatsapp')?.addEventListener('click', e=>{e.preventDefault();openWhatsApp();});
     $('whatsappLink')?.addEventListener('click',e=>{e.preventDefault();openWhatsApp();});
